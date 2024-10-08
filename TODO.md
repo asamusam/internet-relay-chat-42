@@ -12,6 +12,7 @@
 - [ ] authentication
 - [ ] receive messages:
   - [ ] aggregate received packages
+  - [ ] parse message
   - [ ] commands:
     - [ ] client (user):
       - [ ] receive normal one-to-many to-a-group message
@@ -31,6 +32,7 @@
         - [ ] `o` give/take channel opperator priviledge
         - [ ] `l` set/remove user limit to channel
 - [ ] send messages:
+  - [ ] create message
   - [ ] forward one-to-many to-a-group messages
   - [ ] forward private messages
   - [ ] send informative messages (kicked, invite, etc.)

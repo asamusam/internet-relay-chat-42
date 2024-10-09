@@ -1,0 +1,25 @@
+1. Set up a basic server infrastructure
+    - Develop the logic to accept client connections using TCP/IP
+    - Store information for each connected client (socket, username, nickname)
+    - Handle client disconnections and timeouts
+3. Parse incoming messages
+    - Decide what they are and if they are valid
+    - Error handling: silently ignore or reply with an error message
+4. NICK and USER commands
+    - Implement the commands: update the user information and handle errors
+    - Authentication: wait for the client to set their nickname and username upon connnection
+5. Private messaging
+    - PRIVMSG command including errors
+    - Actually forward the message
+6. Channels
+    - Implement the logic for channels creation and joining
+    - Commands JOIN, PART
+    - Broadcast the message to all participants, ensuring the message is received by all of them
+7. Channel operators
+    - Implement the operator assignment: how does a user become an operator
+    - Commands KICK, INVITE, TOPIC
+    - Command MODE
+8. Security enhancements
+    - TLS
+    - Preventing flooding
+    - Logs

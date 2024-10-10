@@ -6,9 +6,9 @@
   |_| \___/|____/ \___/.md
 ```
 - [ ] connection:
-  - [ ] listen on port argv[1]
-  - [ ] encode/decode TCP/IP packets
-  - [ ] encode/decode TLS packets
+  - [ ] Accept client connections using TCP/IP
+  - [ ] Store information for each connected client
+  - [ ] Handle client disconnections and timeouts
 - [ ] authentication
 - [ ] receive messages:
   - [ ] aggregate received packages
@@ -16,16 +16,16 @@
   - [ ] commands:
     - [ ] client (user):
       - [ ] receive normal one-to-many to-a-group message
-      - [ ] `/nick` set (unique) nickname
-      - [ ] `/setname` set username
-      - [ ] `/join` join channel
-      - [ ] `/leave` leave channel
-      - [ ] `/msg` receive private message
+      - [ ] `NICK` set (unique) nickname
+      - [ ] `USER` set username
+      - [ ] `JOIN` join channel
+      - [ ] `PART` leave channel
+      - [ ] `PRIVMSG` receive private message
     - [ ] client (oper):
-      - [ ] `/kick` kick client from channel
-      - [ ] `/invite` invite client to channel
-      - [ ] `/topic` change/view client from channel
-      - [ ] `/mode` set mode:
+      - [ ] `KICK` kick client from channel
+      - [ ] `INVITE` invite client to channel
+      - [ ] `TOPIC` change/view client from channel
+      - [ ] `MODE` set mode:
         - [ ] `i` set/remove invite-ony channel
         - [ ] `t` set/remove 'topic' change privilige
         - [ ] `k` set/remove channel key (password)
@@ -35,7 +35,7 @@
   - [ ] create message
   - [ ] forward one-to-many to-a-group messages
   - [ ] forward private messages
-  - [ ] send informative messages (kicked, invite, etc.)
+  - [ ] send replies
 - [ ] error checking:
   - [ ] partial data
   - [ ] low bandwidth

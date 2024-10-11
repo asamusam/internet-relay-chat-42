@@ -32,3 +32,9 @@
 *.app
 ircserv
 *build
+
+# VS Code configuratiion
+.vscode
+
+# Clang configuration
+compile_flags.txt

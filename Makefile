@@ -1,19 +1,34 @@
 CXX := c++
 INCLUDE := include
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98 -I$(INCLUDE)
-SRC := src/ircserv.cpp src/parser.cpp
+DBCXXFLAGS := -Og -ggdb3 -Wpedantic $(CXXFLAGS)
+SRC := \
+	src/ircserv.cpp \
+	# src/connection.cpp \
+	# src/parser.cpp \
+#SRC
+
 OBJ := $(SRC:.cpp=.o)
 NAME := ircserv
+DBNAME := debug_build
+
+.PHONY: all debug clean fclean re
 
 all: $(NAME)
 
 $(NAME): $(OBJ)
-	$(CXX) $(OBJ) -o $(NAME)
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+debug: $(DBNAME)
+
+$(DBNAME): $(SRC)
+	$(re)
+	$(CXX) $(DBCXXFLAGS) $^ -o $@
 
 clean:
 	$(RM) $(OBJ)
 
 fclean: clean
-	$(RM) $(NAME)
+	$(RM) $(NAME) $(DBNAME)
 
 re: fclean all

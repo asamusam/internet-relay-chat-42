@@ -1,7 +1,7 @@
 #include "App.hpp"
 #include <iostream>
 
-static void print_msg(App::Message const *msg)
+static void print_msg(Message const *msg)
 {
     std::cout << "Prefix: " << msg->prefix << '\n'
               << "Command: " << msg->command << '\n'
@@ -20,8 +20,8 @@ int main(int argc, char **argv)
 
     App app("127.0.0.1", "password");
 
-    App::Client *first_client = new App::Client;
-    App::Message *res_msg = new App::Message;
+    Client *first_client = new Client;
+    Message *res_msg = new Message;
     
     first_client->uuid = 1;
     first_client->nickname = "bant";

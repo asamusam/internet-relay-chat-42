@@ -1,183 +1,167 @@
 #include "App.hpp"
 
+#include <iostream>
 #include <sstream>
 #include <algorithm>
 
-enum ErrorCodes {
-    ERR_UNKNOWNCOMMAND = 421,
-    ERR_NEEDMOREPARAMS = 461,
-    ERR_ALREADYREGISTRED = 462
-};
-
-static std::string intToString(int number)
+static std::string int_to_string(int number)
 {
     std::stringstream ss;
-    
+
     ss << number;
     
     return ss.str();
 }
 
-App::App(std::string name) : serverName(name)
+App::App(std::string const &name, std::string const &password) : server_name(name), server_password(password)
 {
-    Command cmd1 = {"PASS", &App::checkPass, NULL};
-    Command cmd2 = {"NICK", &App::checkNick, NULL};
-    Command cmd3 = {"USER", &App::checkUser, NULL};
-    Command cmd4 = {"JOIN", &App::checkJoin, NULL};
-    Command cmd5 = {"PRIVMSG", &App::checkPrivmsg, NULL};
-    Command cmd6 = {"KICK", &App::checkKick, NULL};
-    Command cmd7 = {"INVITE", &App::checkInvite, NULL};
-    Command cmd8 = {"TOPIC", &App::checkTopic, NULL};
-    Command cmd9 = {"MODE", &App::checkMode, NULL};
+    commands.push_back((Command){"PASS", &App::check_pass, NULL});
+    commands.push_back((Command){"NICK", &App::check_nick, NULL});
+    commands.push_back((Command){"USER", &App::check_user, NULL});
+    commands.push_back((Command){"JOIN", &App::check_join, NULL});
+    commands.push_back((Command){"PRIVMSG", &App::check_privmsg, NULL});
+    commands.push_back((Command){"KICK", &App::check_kick, NULL});
+    commands.push_back((Command){"INVITE", &App::check_invite, NULL});
+    commands.push_back((Command){"TOPIC", &App::check_topic, NULL});
+    commands.push_back((Command){"MODE", &App::check_mode, NULL});
 
-    commands.push_back(cmd1);
-    commands.push_back(cmd2);
-    commands.push_back(cmd3);
-    commands.push_back(cmd4);
-    commands.push_back(cmd5);
-    commands.push_back(cmd6);
-    commands.push_back(cmd7);
-    commands.push_back(cmd8);
-    commands.push_back(cmd9);
-
-    errorMessages[ERR_UNKNOWNCOMMAND] = "<command> :Unknown command";
-    errorMessages[ERR_NEEDMOREPARAMS] = "<command> :Not enough parameters";
-    errorMessages[ERR_ALREADYREGISTRED] = ":You may not reregister";
+    error_messages[ERR_UNKNOWNCOMMAND] = "<command> :Unknown command";
+    error_messages[ERR_NEEDMOREPARAMS] = "<command> :Not enough parameters";
+    error_messages[ERR_ALREADYREGISTRED] = ":You may not reregister";
 }
 
-void App::addClient(client *newClient)
+void App::add_client(Client *new_client)
 {
-    clients.push_back(newClient);
+    clients[new_client->uuid] = new_client;
 }
 
-int App::checkCommand(client const &user, std::string const &cmd, std::string const &params) const
+// any command sent by the client until both username and nickname are set is invalid and silently ignored
+int App::check_command(Client const &user, std::string const &cmd, std::string const &params) const
 {
     for (std::vector<Command>::const_iterator i = commands.begin(); i < commands.end(); i++)
     {
         if (i->name == cmd)
         {
-            return (this->*(i->checkCmd))(user, cmd, params);
+            return (this->*(i->check_cmd))(user, cmd, params);
         }
     }
     return ERR_UNKNOWNCOMMAND;
 }
 
+int App::check_pass(Client const &user, std::string const &cmd, std::string const &params) const
+{
+    return 0;
+}
 
-int App::checkPass(client const &user, std::string const &cmd, std::string const &params) const
+int App::check_nick(Client const &user, std::string const &cmd, std::string const &params) const
 {
    return 0; 
 }
 
-
-int App::checkNick(client const &user, std::string const &cmd, std::string const &params) const
+int App::check_user(Client const &user, std::string const &cmd, std::string const &params) const
 {
    return 0; 
 }
 
-int App::checkUser(client const &user, std::string const &cmd, std::string const &params) const
+int App::check_join(Client const &user, std::string const &cmd, std::string const &params) const
 {
    return 0; 
 }
 
-int App::checkJoin(client const &user, std::string const &cmd, std::string const &params) const
+int App::check_privmsg(Client const &user, std::string const &cmd, std::string const &params) const
 {
    return 0; 
 }
 
-int App::checkPrivmsg(client const &user, std::string const &cmd, std::string const &params) const
+int App::check_kick(Client const &user, std::string const &cmd, std::string const &params) const
 {
    return 0; 
 }
 
-int App::checkKick(client const &user, std::string const &cmd, std::string const &params) const
+int App::check_invite(Client const &user, std::string const &cmd, std::string const &params) const
 {
    return 0; 
 }
 
-int App::checkInvite(client const &user, std::string const &cmd, std::string const &params) const
+int App::check_topic(Client const &user, std::string const &cmd, std::string const &params) const
 {
    return 0; 
 }
 
-int App::checkTopic(client const &user, std::string const &cmd, std::string const &params) const
+int App::check_mode(Client const &user, std::string const &cmd, std::string const &params) const
 {
    return 0; 
 }
 
-int App::checkMode(client const &user, std::string const &cmd, std::string const &params) const
+// -1 do nothing
+// 0 valid message, check the buffer
+// > 0 error reply
+int App::parse_message(std::string const &msg, Client const &user, Message &res_msg) const
 {
-   return 0; 
-}
-
-int App::parseMessage(std::string const &msg, client const &user, message &resMsg) const
-{
-    std::istringstream msgStream(msg);
+    std::istringstream msg_stream(msg);
 
     std::string prefix;
     std::string cmd;
     std::string params;
 
-    (void)resMsg;
-
     if (*msg.begin() == ':')
     {
-        std::getline(msgStream, prefix, ' ');
+        std::getline(msg_stream, prefix, ' ');
         prefix.erase(prefix.begin());
 
-        if (isValidPrefix(user, prefix) == false)
+        if (is_valid_prefix(user, prefix) == false)
         {
             std::cout << "Invalid prefix: " << prefix << std::endl;
             return -1;
         }
     }
 
-    msgStream >> std::ws;
-    std::getline(msgStream, cmd, ' ');
-    
-    msgStream >> std::ws;
-    std::getline(msgStream, params, ' ');
+    msg_stream >> std::ws;
+    std::getline(msg_stream, cmd, ' ');
 
-    int res = checkCommand(user, cmd, params);
+    msg_stream >> std::ws;
+    std::getline(msg_stream, params, ' ');
+
+    int res = check_command(user, cmd, params);
     if (res == -1)
         return -1;
     else if (res == 0)
     {
-        resMsg.prefix = user.nickname;
-        resMsg.command = cmd;
-        resMsg.params.push_back(params);
+        res_msg.prefix = user.nickname;
+        res_msg.command = cmd;
+        res_msg.params.push_back(params);
         return 0;
     }
     else
     {
-        resMsg.prefix = this->serverName;
-        resMsg.command = intToString(res);
-        resMsg.params.push_back(errorMessages.find(res)->second);
+        res_msg.prefix = this->server_name;
+        res_msg.command = int_to_string(res);
+        res_msg.params.push_back(error_messages.find(res)->second);
         return res;
     }
 }
 
-
-bool App::isValidPrefix(client const &user, std::string const &prefix) const
+// check if the nickname in the prefix is registered and belong to the source
+bool App::is_valid_prefix(Client const &user, std::string const &prefix) const
 {
-    int clientIdFound;
-    
+    int client_id_found;
+
     if (user.nickname.empty())
         return false;
 
-    clientIdFound = getClientIdByName(prefix);
-    if (clientIdFound == -1 || clientIdFound != user.uuid)
+    client_id_found = get_client_id_by_name(prefix);
+    if (client_id_found == -1 || client_id_found != user.uuid)
         return false;
 
     return true;
 }
 
-
-int App::getClientIdByName(std::string const &name) const
+int App::get_client_id_by_name(std::string const &name) const
 {
-    for (std::vector<client *>::const_iterator i = clients.begin(); i < clients.end(); i++)
+    for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
     {
-        if ((*i)->registered && (*i)->nickname == name)
-            return (*i)->uuid;
+        if (i->second->registered && i->second->nickname == name)
+            return i->second->uuid;
     }
     return -1;
 }

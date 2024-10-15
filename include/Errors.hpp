@@ -1,0 +1,10 @@
+#ifndef ERROR_HPP
+#define ERROR_HPP
+
+enum IRCErrors {
+    ERR_UNKNOWNCOMMAND = 421,
+    ERR_NEEDMOREPARAMS = 461,
+    ERR_ALREADYREGISTRED = 462
+};
+
+#endif // ERROR_HPP

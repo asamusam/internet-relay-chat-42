@@ -24,3 +24,4 @@
     - Preventing flooding
     - Logs
     - Configuration file
+    - Limit number of attemps for the PASS command

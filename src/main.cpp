@@ -1,52 +1,50 @@
 #include "App.hpp"
 #include <iostream>
 
-static void print_msg(Message const *msg)
-{
-    std::cout << "Prefix: " << msg->prefix << '\n'
-              << "Command: " << msg->command << '\n'
-              << "Params: ";
-    for (std::vector<std::string>::const_iterator i = msg->params.begin(); i < msg->params.end(); i++)
-    {
-        std::cout << *i << " ";
-    }
-    std::cout << std::endl;
-}
-
 int main(int argc, char **argv)
 {
-    (void)argc;
-    (void)argv;
-
     App app("127.0.0.1", "password");
-
-    Client *first_client = new Client;
-    Message *res_msg = new Message;
     
+    Client *first_client = new Client;
+    Client *second_client = new Client;
+
     first_client->uuid = 1;
-    first_client->nickname = "bant";
     first_client->fd = 3;
-    first_client->is_registered = false;
-    first_client->has_valid_pwd = false;
+    first_client->nickname = "bant";
+    first_client->username = "bantik";
+    first_client->has_valid_pwd = true;
+    first_client->is_registered = true;
+
+    second_client->uuid = 2;
+    second_client->fd = 4;
+    second_client->nickname = "";
+    second_client->username = "";
+    second_client->has_valid_pwd = true;
+    second_client->is_registered = false;
 
     app.add_client(first_client);
+    app.add_client(second_client);
 
-    std::string msg("PASS     bantozavr");
+    std::string msg;
+    if (argc == 2)
+        msg = argv[1];
+    else
+        msg = "PASS wrong";
 
-    int res = app.parse_message(msg, *first_client, *res_msg);
+    std::string reply;
+    int res = app.parse_message(*second_client, msg, reply);
     if (res == 0)
     {
         std::cout << "Message parsed successfully!" << std::endl;
-        print_msg(res_msg);
+        std::cout << "Command executed." << std::endl;
     }
     else if (res > 0)
     {
-        std::cout << "There was an error! Formed an error mesage to send back to the client." << std::endl;
-        print_msg(res_msg);
+        std::cout << "Formed error reply\n" << reply << std::endl;
     }
     else
     {
-        std::cout << "Something went wrong during parsing, I'm ignoring it." << std::endl;
+        std::cout << "Ignoring this message." << std::endl;
     }
     delete first_client;
     return 0;

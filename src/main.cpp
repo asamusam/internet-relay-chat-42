@@ -26,12 +26,12 @@ int main(int argc, char **argv)
     first_client->uuid = 1;
     first_client->nickname = "bant";
     first_client->fd = 3;
-    first_client->registered = true;
-    first_client->password = false;
+    first_client->is_registered = false;
+    first_client->has_valid_pwd = false;
 
     app.add_client(first_client);
 
-    std::string msg("NICKnmnmn bantozavr");
+    std::string msg("PASS     bantozavr");
 
     int res = app.parse_message(msg, *first_client, *res_msg);
     if (res == 0)

@@ -7,8 +7,8 @@ struct Client
 {
     int uuid;
     int fd;
-    bool registered;
-    bool password;
+    bool is_registered;
+    bool has_valid_pwd;
     std::string username;
     std::string nickname;
 };

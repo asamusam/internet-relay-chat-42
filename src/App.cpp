@@ -69,8 +69,6 @@ the server just sends back ERR_NICKNAMEINUSE reply.
 */
 int App::nick(Client &user, std::vector<std::string> const &params)
 {
-    if (user.is_registered)
-        return ERR_ALREADYREGISTRED;
     if (!user.has_valid_pwd)
         return ERR_PASSWDMISMATCH;
     if (params.empty())
@@ -80,6 +78,10 @@ int App::nick(Client &user, std::vector<std::string> const &params)
     if (find_client_by_nick(params[0]))
         return ERR_NICKNAMEINUSE;
     user.nickname = params[0];
+    if (!user.is_registered && !user.username.empty())
+        user.is_registered = true;
+    //std::cout << "New nickname: " << user.nickname 
+    //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
     return 0; 
 }
 
@@ -90,24 +92,23 @@ Nickname has a maximum length of nine (9) characters.
 <number>     ::= '0' ... '9'
 <special>    ::= '-' | '[' | ']' | '\' | '`' | '^' | '{' | '}'
 */
-bool App::nick_is_valid(std::string const &nick) const
+bool App::nick_is_valid(std::string const &nickname) const
 {
-    size_t nick_len = nick.length();
+    size_t nick_len = nickname.length();
     std::string special("-[]\\`^{}");
 
-    if (nick_len > 9)
+    if (nick_len > this->nick_max_len)
         return false;
-    if (!std::isalpha(nick[0]))
+    if (!std::isalpha(nickname[0]))
         return false;
     for (size_t i = 0; i < nick_len; i++)
     {
-        if (!std::isalnum(nick[i]) && special.find(nick[i]) == special.npos)
+        if (!std::isalnum(nickname[i]) && special.find(nickname[i]) == special.npos)
             return false;
     }
     return true;
 }
 
-// TODO: MAYBE NOT THE BEST IDEA TO STORE CLIENTS WITH IDS AS KEYS: NICK IS USED MORE OFTEN TO FIND A CLIENT
 Client *App::find_client_by_nick(std::string const &nick) const
 {
     for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
@@ -118,14 +119,33 @@ Client *App::find_client_by_nick(std::string const &nick) const
     return NULL;
 }
 
-
+/*
+Maximum length is 12. If the username exceeds this limit, it is silently truncated.
+Expected format:
+<user>     ::= <nonwhite> { <nonwhite> }
+<nonwhite> ::= <any 8bit code except SPACE (0x20), NUL (0x0), CR (0xd), and LF (0xa)>
+If the username doesn't comply with the rules described above, the message
+is silently ignored by the server.
+*/
 int App::user(Client &user, std::vector<std::string> const &params)
 {
     if (user.is_registered)
         return ERR_ALREADYREGISTRED;
     if (!user.has_valid_pwd)
         return ERR_PASSWDMISMATCH;
-    return 0; 
+    if (params.empty())
+        return ERR_NEEDMOREPARAMS;
+    if (params[0].find(' ') != params[0].npos)
+        return -1;
+    if (params[0].length() > 12)
+        user.username = params[0].substr(0, 12);
+    else
+        user.username = params[0];
+    if (!user.nickname.empty())
+        user.is_registered = true;
+    //std::cout << "New username: " << user.username 
+    //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
+    return 0;
 }
 
 int App::join(Client &user, std::vector<std::string> const &params)

@@ -18,6 +18,8 @@ class App
             std::string name;
             int (App::*cmd_func)(Client &user, std::vector<std::string> const &params);
         };
+        static const int nick_max_len = 9;
+        static const int user_max_len = 12;
 
     private:
         std::string server_name;
@@ -44,7 +46,7 @@ class App
         int topic(Client &user, std::vector<std::string> const &params);
         int mode(Client &user, std::vector<std::string> const &params);
 
-        bool nick_is_valid(std::string const &nick) const;
+        bool nick_is_valid(std::string const &nickname) const;
         Client *find_client_by_nick(std::string const &nick) const;
 };
 

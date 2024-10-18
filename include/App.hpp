@@ -34,8 +34,11 @@ class App
 
         void add_client(Client *new_client);
 
-        int parse_message(Client &user, std::string const &msg_string, std::string &reply);
-        int run_cmd(Client &user, Message const &msg);
+        int parse_message(Client &user, std::string const &msg_string, Message &msg) const;
+        void run_message(Client &user, Message const &msg);
+        
+        std::string numeric_reply(int err, std::string const &var) const;
+
         int pass(Client &user, std::vector<std::string> const &params);
         int nick(Client &user, std::vector<std::string> const &params);
         int user(Client &user, std::vector<std::string> const &params);
@@ -48,6 +51,8 @@ class App
 
         bool nick_is_valid(std::string const &nickname) const;
         Client *find_client_by_nick(std::string const &nick) const;
+
+        int send_message(Client const &client, std::string const &message) const;
 };
 
 #endif // APP_HPP

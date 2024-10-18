@@ -1,6 +1,18 @@
 #include "App.hpp"
 #include <iostream>
 
+static void printMsg(Message const &msg)
+{
+    std::cout << "Prefix: " << msg.prefix << '\n'
+              << "Command: " << msg.command << '\n'
+              << "Params: ";
+    for (std::vector<std::string>::const_iterator i = msg.params.begin(); i < msg.params.end(); i++)
+    {
+        std::cout << *i << ", ";
+    }
+    std::cout << std::endl;
+}
+
 int main(int argc, char **argv)
 {
     App app("127.0.0.1", "password");
@@ -25,27 +37,21 @@ int main(int argc, char **argv)
     app.add_client(first_client);
     app.add_client(second_client);
 
-    std::string msg;
+    std::string msg_string;
     if (argc == 2)
-        msg = argv[1];
+        msg_string = argv[1];
     else
-        msg = "PASS wrong";
+        msg_string = "PASS wrong";
 
-    std::string reply;
-    int res = app.parse_message(*second_client, msg, reply);
-    if (res == 0)
-    {
-        std::cout << "Message parsed successfully!" << std::endl;
-        std::cout << "Command executed." << std::endl;
-    }
-    else if (res > 0)
-    {
-        std::cout << "Formed error reply\n" << reply << std::endl;
-    }
+    int res;
+    Message msg;
+    res = app.parse_message(*second_client, msg_string, msg);
+    if (res == -1)
+        std::cout << "Ignore" << std::endl;
     else
     {
-        std::cout << "Ignoring this message." << std::endl;
+        app.run_message(*second_client, msg);
     }
-    delete first_client;
+    delete first_client, second_client;
     return 0;
 }

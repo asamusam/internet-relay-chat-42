@@ -155,11 +155,20 @@ int App::join(Client &user, std::vector<std::string> const &params)
     return 0; 
 }
 
+/*
+Parameters: <receiver>{,<receiver>} <text to be sent>
+<receiver> can be a nickname or a channel
+*/
 int App::privmsg(Client &user, std::vector<std::string> const &params)
 {
     if (!user.is_registered)
         return -1;
-    return 0; 
+
+    // split receivers
+    // try to send message to every one of them
+    // send replies accordingly for each
+    
+    return 0;
 }
 
 int App::kick(Client &user, std::vector<std::string> const &params)
@@ -190,54 +199,87 @@ int App::mode(Client &user, std::vector<std::string> const &params)
     return 0; 
 }
 
-int App::run_cmd(Client &user, Message const &msg)
+std::string App::numeric_reply(int err, std::string const &var) const
 {
+    std::string err_msg;
+    std::size_t start_pos;
+    std::size_t end_pos;
+    std::string reply;
+
+    err_msg = error_messages.find(err)->second;
+    start_pos = err_msg.find('<');
+    end_pos = err_msg.find('>');
+
+    if (start_pos != std::string::npos && end_pos != std::string::npos && end_pos > start_pos)
+        err_msg.replace(start_pos, end_pos - start_pos + 1, var);
+
+    reply = ':' + this->server_name + ' ' + int_to_string(err) + ' ' + err_msg;
+    return reply;
+}
+
+
+/*
+Runs the command and sends appropriate replies.
+*/
+void App::run_message(Client &user, Message const &msg)
+{
+    std::string reply;
+    
     for (std::vector<Command>::const_iterator i = commands.begin(); i < commands.end(); i++)
     {
         if (i->name == msg.command)
-            return (this->*(i->cmd_func))(user, msg.params);
+        {
+            (this->*(i->cmd_func))(user, msg.params);
+            return;
+        }
     }
-    return ERR_UNKNOWNCOMMAND;
+    reply = numeric_reply(ERR_UNKNOWNCOMMAND, msg.command);
+    send_message(user, reply);
 }
 
-// -1 do nothing
-// 0 valid message, check the buffer
-// > 0 error reply
-int App::parse_message(Client &user, std::string const &msg_string, std::string &reply)
+
+int App::send_message(Client const &client, std::string const &message) const
+{
+    std::cout << "Message sent to " << (client.nickname.empty() ? "client" : client.nickname) << '\n' << message << std::endl;
+    return 0;
+}
+
+static void skip_space(std::istringstream &msg_stream)
+{
+    while (msg_stream.peek() == ' ')
+        msg_stream.ignore(1);
+}
+
+/*
+On success, returns 0 and fills the Message structure provided.
+On error, returns -1, which means the message should be ignored.
+*/
+int App::parse_message(Client &user, std::string const &msg_string, Message &msg) const
 {
     std::istringstream msg_stream(msg_string);
-    Message msg;
     std::string param;
-    std::string trailing;
-    int res;
 
-    // THE PROBLEM: >> operator treats any whitespace as delimiter, not only ' '
-    if (msg_string[0] == ':')
+    if (msg_stream.peek() == ':')
     {
-        msg_stream >> msg.prefix;
-        msg.prefix.erase(msg.prefix.begin());
-
+        std::getline(msg_stream, msg.prefix, ' ');
         if (!user.is_registered || user.nickname != msg.prefix)
-        {
             return -1;
-        }
     }
 
-    msg_stream >> msg.command;
-    while (msg_stream >> param)
+    skip_space(msg_stream);
+    std::getline(msg_stream, msg.command, ' ');
+
+    while (!msg_stream.eof())
     {
-        if (param[0] == ':')
+        skip_space(msg_stream);
+        if (msg_stream.peek() == ':')
         {
-            std::getline(msg_stream, trailing);
-            msg.params.push_back(param.substr(1) + trailing); // WRONG, COULD BE MULTIPLE SPACES
+            msg_stream.ignore(1);
+            std::getline(msg_stream, param);
         }
+        else
+            std::getline(msg_stream, param, ' ');
         msg.params.push_back(param);
     }
-
-    res = run_cmd(user, msg);
-    if (res > 0)
-    {
-        reply = ':' + this->server_name + ' ' + int_to_string(res) + ' ' + error_messages[res];
-    }
-    return res;
+    return 0;
 }

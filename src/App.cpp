@@ -31,6 +31,11 @@ App::App(std::string const &name, std::string const &password) : server_name(nam
     error_messages[ERR_NICKNAMEINUSE]    = "<nick> :Nickname is already in use";
     error_messages[ERR_NONICKNAMEGIVEN]  = ":No nickname given";
     error_messages[ERR_ERRONEUSNICKNAME] = "<nick> :Erroneus nickname";
+    error_messages[ERR_NORECIPIENT]      = ":No recipient given (<command>)";
+    error_messages[ERR_NOTEXTTOSEND]     = ":No text to send";
+    error_messages[ERR_CANNOTSENDTOCHAN] = "<channel name> :Cannot send to channel";
+    error_messages[ERR_TOOMANYTARGETS]   = "<target> :Duplicate recipients. No message delivered";
+    error_messages[ERR_NOSUCHNICK]       = "<nickname> :No such nick/channel";
 }
 
 void App::add_client(Client *new_client)
@@ -47,42 +52,59 @@ after already setting nickname or username, the server replies with ERR_PASSWDMI
 and future attempts to complete the registration with NICK/USER commands lead
 to the same result until the correct password is set.
 */
-int App::pass(Client &user, std::vector<std::string> const &params)
+void App::pass(Client &user, std::vector<std::string> const &params)
 {
     if (user.is_registered)
-        return ERR_ALREADYREGISTRED;
+    {
+        send_numeric_reply(user, ERR_ALREADYREGISTRED, "");
+        return ;
+    }
     if (params.empty())
-        return ERR_NEEDMOREPARAMS;
+    {
+        send_numeric_reply(user, ERR_NEEDMOREPARAMS, "PASS");
+        return ;
+    }
     if (params[0] != this->server_password)
     {
         if (user.has_valid_pwd)
             user.has_valid_pwd = false;
-        return ERR_PASSWDMISMATCH;
+        send_numeric_reply(user, ERR_PASSWDMISMATCH, "");
+        return ;
     }
     user.has_valid_pwd = true;
-    return 0;
 }
 
 /*
 If the nickname is already used by other client,
 the server just sends back ERR_NICKNAMEINUSE reply.
 */
-int App::nick(Client &user, std::vector<std::string> const &params)
+void App::nick(Client &user, std::vector<std::string> const &params)
 {
     if (!user.has_valid_pwd)
-        return ERR_PASSWDMISMATCH;
+    {
+        send_numeric_reply(user, ERR_PASSWDMISMATCH, "");
+        return ;
+    }
     if (params.empty())
-        return ERR_NONICKNAMEGIVEN;
+    {
+        send_numeric_reply(user, ERR_NONICKNAMEGIVEN, "");
+        return ;
+    }
     if (!nick_is_valid(params[0]))
-        return ERR_ERRONEUSNICKNAME;
+    {
+        send_numeric_reply(user, ERR_ERRONEUSNICKNAME, params[0]);
+        return ;
+    }
     if (find_client_by_nick(params[0]))
-        return ERR_NICKNAMEINUSE;
+    {
+        send_numeric_reply(user, ERR_NICKNAMEINUSE, params[0]);
+        return ;
+    }
     user.nickname = params[0];
     if (!user.is_registered && !user.username.empty())
         user.is_registered = true;
     //std::cout << "New nickname: " << user.nickname 
     //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
-    return 0; 
 }
 
 /*
@@ -127,16 +149,27 @@ Expected format:
 If the username doesn't comply with the rules described above, the message
 is silently ignored by the server.
 */
-int App::user(Client &user, std::vector<std::string> const &params)
+void App::user(Client &user, std::vector<std::string> const &params)
 {
     if (user.is_registered)
-        return ERR_ALREADYREGISTRED;
+    {
+        send_numeric_reply(user, ERR_ALREADYREGISTRED, "");
+        return ;
+    }
     if (!user.has_valid_pwd)
-        return ERR_PASSWDMISMATCH;
+    {
+        send_numeric_reply(user, ERR_PASSWDMISMATCH, "");
+        return ;
+    }
     if (params.empty())
-        return ERR_NEEDMOREPARAMS;
+    {
+        send_numeric_reply(user, ERR_NEEDMOREPARAMS, "USER");
+        return ;
+    }
     if (params[0].find(' ') != params[0].npos)
-        return -1;
+    {
+        return ;
+    }
     if (params[0].length() > 12)
         user.username = params[0].substr(0, 12);
     else
@@ -145,61 +178,97 @@ int App::user(Client &user, std::vector<std::string> const &params)
         user.is_registered = true;
     //std::cout << "New username: " << user.username 
     //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
-    return 0;
 }
 
-int App::join(Client &user, std::vector<std::string> const &params)
+void App::join(Client &user, std::vector<std::string> const &params)
 {
     if (!user.is_registered)
-        return -1;
-    return 0; 
+        return ;
+}
+
+// TODO: make a template
+int split_targets(std::string const &target_str, std::vector<std::string> &targets)
+{
+    std::istringstream ss(target_str);
+    std::string target;
+
+    while (!ss.eof())
+    {
+        std::getline(ss, target, ',');
+        if (!target.empty())
+        {
+            if (std::find(targets.begin(), targets.end(), target) != targets.end())
+                return -1;
+            targets.push_back(target);
+            std::cout << "new target: " << target << std::endl;
+        }
+    }
+    return 0;
 }
 
 /*
-Parameters: <receiver>{,<receiver>} <text to be sent>
-<receiver> can be a nickname or a channel
+Parameters: PRIVMSG <receiver>{,<receiver>} <text to be sent>
+<receiver> can be a nickname or a channel.
+Message can be sent to the same client that sends it.
 */
-int App::privmsg(Client &user, std::vector<std::string> const &params)
+// TODO: channels
+void App::privmsg(Client &user, std::vector<std::string> const &params)
 {
-    if (!user.is_registered)
-        return -1;
+    std::vector<std::string> targets;
+    Client *recipient;
+    std::string message;
 
-    // split receivers
-    // try to send message to every one of them
-    // send replies accordingly for each
+    if (!user.is_registered)
+        return ;
+    if (params[0].find(',') != params[0].npos)
+    {
+        if (split_targets(params[0], targets) == -1)
+        {
+            send_numeric_reply(user, ERR_TOOMANYTARGETS, params[0]);
+            return ;
+        }
+    }
+    else
+        targets.push_back(params[0]);
     
-    return 0;
+    for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
+    {
+        recipient = find_client_by_nick(*i);
+        if (recipient && recipient->is_registered)
+        {
+            message = ':' + user.nickname + " PRIVMSG " + params[1];
+            send_message(*recipient, message);
+        }
+        else
+            send_numeric_reply(user, ERR_NOSUCHNICK, *i);
+    }    
 }
 
-int App::kick(Client &user, std::vector<std::string> const &params)
+void App::kick(Client &user, std::vector<std::string> const &params)
 {
     if (!user.is_registered)
-        return -1;
-    return 0; 
+        return ;
 }
 
-int App::invite(Client &user, std::vector<std::string> const &params)
+void App::invite(Client &user, std::vector<std::string> const &params)
 {
     if (!user.is_registered)
-        return -1;
-    return 0; 
+        return ;
 }
 
-int App::topic(Client &user, std::vector<std::string> const &params)
+void App::topic(Client &user, std::vector<std::string> const &params)
 {
     if (!user.is_registered)
-        return -1;
-    return 0; 
+        return ;
 }
 
-int App::mode(Client &user, std::vector<std::string> const &params)
+void App::mode(Client &user, std::vector<std::string> const &params)
 {
     if (!user.is_registered)
-        return -1;
-    return 0; 
+        return ;
 }
 
-std::string App::numeric_reply(int err, std::string const &var) const
+void App::send_numeric_reply(Client const &user, int err, std::string const &var) const
 {
     std::string err_msg;
     std::size_t start_pos;
@@ -214,7 +283,7 @@ std::string App::numeric_reply(int err, std::string const &var) const
         err_msg.replace(start_pos, end_pos - start_pos + 1, var);
 
     reply = ':' + this->server_name + ' ' + int_to_string(err) + ' ' + err_msg;
-    return reply;
+    send_message(user, reply);
 }
 
 
@@ -233,8 +302,7 @@ void App::run_message(Client &user, Message const &msg)
             return;
         }
     }
-    reply = numeric_reply(ERR_UNKNOWNCOMMAND, msg.command);
-    send_message(user, reply);
+    send_numeric_reply(user, ERR_UNKNOWNCOMMAND, msg.command);
 }
 
 
@@ -279,7 +347,8 @@ int App::parse_message(Client &user, std::string const &msg_string, Message &msg
         }
         else
             std::getline(msg_stream, param, ' ');
-        msg.params.push_back(param);
+        if (!param.empty())
+            msg.params.push_back(param);
     }
     return 0;
 }

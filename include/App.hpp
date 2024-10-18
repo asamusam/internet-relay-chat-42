@@ -16,7 +16,7 @@ class App
         struct Command
         {
             std::string name;
-            int (App::*cmd_func)(Client &user, std::vector<std::string> const &params);
+            void (App::*cmd_func)(Client &user, std::vector<std::string> const &params);
         };
         static const int nick_max_len = 9;
         static const int user_max_len = 12;
@@ -37,22 +37,22 @@ class App
         int parse_message(Client &user, std::string const &msg_string, Message &msg) const;
         void run_message(Client &user, Message const &msg);
         
-        std::string numeric_reply(int err, std::string const &var) const;
 
-        int pass(Client &user, std::vector<std::string> const &params);
-        int nick(Client &user, std::vector<std::string> const &params);
-        int user(Client &user, std::vector<std::string> const &params);
-        int join(Client &user, std::vector<std::string> const &params);
-        int privmsg(Client &user, std::vector<std::string> const &params);
-        int kick(Client &user, std::vector<std::string> const &params);
-        int invite(Client &user, std::vector<std::string> const &params);
-        int topic(Client &user, std::vector<std::string> const &params);
-        int mode(Client &user, std::vector<std::string> const &params);
+        void pass(Client &user, std::vector<std::string> const &params);
+        void nick(Client &user, std::vector<std::string> const &params);
+        void user(Client &user, std::vector<std::string> const &params);
+        void join(Client &user, std::vector<std::string> const &params);
+        void privmsg(Client &user, std::vector<std::string> const &params);
+        void kick(Client &user, std::vector<std::string> const &params);
+        void invite(Client &user, std::vector<std::string> const &params);
+        void topic(Client &user, std::vector<std::string> const &params);
+        void mode(Client &user, std::vector<std::string> const &params);
 
         bool nick_is_valid(std::string const &nickname) const;
         Client *find_client_by_nick(std::string const &nick) const;
 
-        int send_message(Client const &client, std::string const &message) const;
+        void send_numeric_reply(Client const &user, int err, std::string const &var) const;
+        int send_message(Client const &user, std::string const &message) const;
 };
 
 #endif // APP_HPP

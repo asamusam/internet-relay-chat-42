@@ -7,8 +7,8 @@
 class ConnConst
 {
 	public:
-		static const int max_events = 12;
-		static const int max_conns = 12;
+		static const int max_events  = 12;
+		static const int max_conns   = 12;
 		static const int time_out_ms = NO_TIMEOUT;
 };
 

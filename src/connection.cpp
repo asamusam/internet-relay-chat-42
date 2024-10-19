@@ -2,11 +2,12 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <netinet/in.h>
 #include <sstream>
 #include <sys/epoll.h>
-#include <netinet/in.h>
-#include "connection.hpp"
 #include "InternalError.hpp"
+#include "SystemCallErrorMessage.hpp"
+#include "connection.hpp"
 
 int parse_port(char *s)
 {
@@ -34,22 +35,13 @@ int listen_sock_init(int port)
 
 	sock_fd = socket(sai.sin_family, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (-1 == sock_fd)
-	{
-		std::cerr << "Error while creating listeing socket (socket()): " << std::strerror(errno) << "\n";
-		throw (-1);
-	}
+		throw (SCEM_SOCKET);
 
 	if (-1 == bind(sock_fd, (struct sockaddr *) &sai, sizeof(sai)))
-	{
-		std::cerr << "Error while naming listening socket (bind()): " << std::strerror(errno) << "\n";
-		throw (-1);
-	}
+		throw (SCEM_BIND);
 
 	if (-1 == listen(sock_fd, ConnConst::max_conns))
-	{
-		std::cerr << "Error while setting up listeing socket (listen()): " << std::strerror(errno) << "\n";
-		throw (-1);
-	}
+		throw (SCEM_LISTEN);
 
 	return (sock_fd);
 }
@@ -62,18 +54,12 @@ int epoll_init(int listen_sock_fd)
 
 	ep_fd = epoll_create1(0);
 	if (-1 == ep_fd)
-	{
-		std::cerr << "Error while creating epoll instance (epoll_create()): " << std::strerror(errno) << "\n";
-		throw (-1);
-	}
+		throw (SCEM_EPOLL_CREATE);
 
 	ev.events = EPOLLIN;
 	ev.data.fd = listen_sock_fd;
 	if (-1 == epoll_ctl(ep_fd, EPOLL_CTL_ADD, listen_sock_fd, &ev))
-	{
-		std::cerr << "Error while setting up epoll instance (epoll_ctl()): " << std::strerror(errno) << "\n";
-		throw (-1);
-	}
+		throw (SCEM_EPOLL_CTL);
 
 	return (ep_fd);
 }

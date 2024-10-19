@@ -3,8 +3,9 @@ INCLUDE := include
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98 -I$(INCLUDE)
 DBCXXFLAGS := -Og -ggdb3 -Wpedantic $(CXXFLAGS)
 SRC := \
-	src/ircserv.cpp \
 	src/connection.cpp \
+	src/internal_error.cpp \
+	src/ircserv.cpp \
 	# src/parser.cpp \
 #SRC
 

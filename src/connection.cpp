@@ -1,9 +1,12 @@
+#include <cerrno>
 #include <cstring>
+#include <iostream>
 #include <limits>
 #include <sstream>
 #include <sys/epoll.h>
 #include <netinet/in.h>
 #include "connection.hpp"
+#include "internal_error.hpp"
 
 int parse_port(char *s)
 {
@@ -14,7 +17,7 @@ int parse_port(char *s)
 	iss >> port;
 
 	if (port < 1024 || port > std::numeric_limits<unsigned short>::max())
-		throw (1); // TODO: better error
+		throw (IEC_BADPORTNUM);
 
 	return (port);
 }
@@ -31,13 +34,22 @@ int listen_sock_init(int port)
 
 	sock_fd = socket(sai.sin_family, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (-1 == sock_fd)
-		throw (-1); // TODO: better error message
+	{
+		std::cerr << "Error while creating listeing socket (socket()): " << std::strerror(errno) << "\n";
+		throw (-1);
+	}
 
 	if (-1 == bind(sock_fd, (struct sockaddr *) &sai, sizeof(sai)))
-		throw (-1); // TODO: better error message
+	{
+		std::cerr << "Error while naming listening socket (bind()): " << std::strerror(errno) << "\n";
+		throw (-1);
+	}
 
 	if (-1 == listen(sock_fd, ConnConst::max_conns))
-		throw (-1); // TODO: better error message
+	{
+		std::cerr << "Error while setting up listeing socket (listen()): " << std::strerror(errno) << "\n";
+		throw (-1);
+	}
 
 	return (sock_fd);
 }
@@ -50,12 +62,18 @@ int epoll_init(int listen_sock_fd)
 
 	ep_fd = epoll_create1(0);
 	if (-1 == ep_fd)
-		throw (-1); // TODO: better error message
+	{
+		std::cerr << "Error while creating epoll instance (epoll_create()): " << std::strerror(errno) << "\n";
+		throw (-1);
+	}
 
 	ev.events = EPOLLIN;
 	ev.data.fd = listen_sock_fd;
 	if (-1 == epoll_ctl(ep_fd, EPOLL_CTL_ADD, listen_sock_fd, &ev))
-		throw (-1); // TODO: better error message
+	{
+		std::cerr << "Error while setting up epoll instance (epoll_ctl()): " << std::strerror(errno) << "\n";
+		throw (-1);
+	}
 
 	return (ep_fd);
 }
@@ -68,10 +86,18 @@ void accept_in_conns(int epoll_fd, int listen_sock_fd)
 
 	conn_sock_fd = accept4(listen_sock_fd, NULL, NULL, SOCK_NONBLOCK);	
 	if (-1 == conn_sock_fd)
-		throw (-1); // TODO: better error (this is a syscall error)
+	{
+		std::cerr << "Error while trying to accept outside connection (accept4()): " << std::strerror(errno) << "\n";
+		return ;
+		// TODO: Handle error approprately ? should be handled by conn_loop();
+	}
 
 	ev.events = EPOLLIN;
 	ev.data.fd = conn_sock_fd;
 	if (-1 == epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn_sock_fd, &ev))
-		throw (-1); // TODO: better error (this is a syscall error)
+	{
+		std::cerr << "Error while trying to accept outside connection (accept4()): " << std::strerror(errno) << "\n";
+		return ;
+		// TODO: Handle error approprately ? should be handled by conn_loop();
+	}
 }

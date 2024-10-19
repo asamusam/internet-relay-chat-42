@@ -1,7 +1,11 @@
+#include <cerrno>
+#include <cstdio>
 #include <cstring>
+#include <iostream>
 #include <sys/epoll.h>
 #include "ircserv.hpp"
 #include "connection.hpp"
+#include "internal_error.hpp"
 
 void conn_loop(int port)
 {
@@ -16,7 +20,10 @@ void conn_loop(int port)
 	{
 		nfds = epoll_wait(epoll_fd, events, ConnConst::max_events, ConnConst::time_out_ms);
 		if (-1 == nfds)
-			throw (-1); // TODO: better error (this is a syscall error)
+		{
+			std::cerr << "Error while waiting for events (epoll_wait())" << std::strerror(errno) << "\n";
+			throw (-1);
+		}
 
 		for (int i = 0; i < nfds; ++i)
 		{
@@ -33,7 +40,10 @@ void conn_loop(int port)
 int main(int argc, char **argv)
 {
 	if (argc != 3)
-		return (1); // TODO: better error
+	{
+		std::cerr << "Must have two arguments: listening port and server password\n";
+		return (1);
+	}
 
 	try
 	{
@@ -42,10 +52,16 @@ int main(int argc, char **argv)
 	catch (int e)
 	{
 		if (e == -1)
-			return (1); // TODO: its a syscall error, handle appropriatley
-		if (e == 1)
-			return (1); // TODO: its another type of error, handle appropriatley
+		{
+			std::cerr << "Program will exit with failure due to a system call error\n";
+			return (2);
+		}
+		if (e > 0)
+		{
+			std::cerr << "Internal Error: " << InternalError::get_error_message((internal_error_code) e) << "\n";
+			return (1);
+		}
 	}
 
-    return 0;
+    return (0);
 }

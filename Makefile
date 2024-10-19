@@ -4,7 +4,7 @@ CXXFLAGS := -Wall -Wextra -Werror -std=c++98 -I$(INCLUDE)
 DBCXXFLAGS := -Og -ggdb3 -Wpedantic $(CXXFLAGS)
 SRC := \
 	src/connection.cpp \
-	src/internal_error.cpp \
+	src/InternalError.cpp \
 	src/ircserv.cpp \
 	# src/parser.cpp \
 #SRC

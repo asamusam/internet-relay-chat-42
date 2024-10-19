@@ -1,4 +1,4 @@
-#include "internal_error.hpp"
+#include "InternalError.hpp"
 
 std::map<internal_error_code, std::string> InternalError::error_messages;
 

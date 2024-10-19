@@ -6,7 +6,7 @@
 #include <sys/epoll.h>
 #include <netinet/in.h>
 #include "connection.hpp"
-#include "internal_error.hpp"
+#include "InternalError.hpp"
 
 int parse_port(char *s)
 {

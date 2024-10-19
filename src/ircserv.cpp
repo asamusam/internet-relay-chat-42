@@ -5,7 +5,7 @@
 #include <sys/epoll.h>
 #include "ircserv.hpp"
 #include "connection.hpp"
-#include "internal_error.hpp"
+#include "InternalError.hpp"
 
 void conn_loop(int port)
 {
@@ -45,8 +45,13 @@ int main(int argc, char **argv)
 		return (1);
 	}
 
+
 	try
 	{
+		std::string password(argv[2]);
+		if (password.size() < 8 || password.size() > 32)
+			throw (IEC_BADPASS);
+
 		conn_loop(parse_port(argv[1]));
 	}
 	catch (int e)

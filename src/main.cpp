@@ -19,23 +19,28 @@ int main(int argc, char **argv)
     
     Client *first_client = new Client;
     Client *second_client = new Client;
+    Channel *channel = new Channel("home");
 
     first_client->uuid = 1;
     first_client->fd = 3;
     first_client->nickname = "bant";
-    first_client->username = "bantik";
+    first_client->username = "bant";
     first_client->has_valid_pwd = true;
     first_client->is_registered = true;
 
     second_client->uuid = 2;
     second_client->fd = 4;
-    second_client->nickname = "";
-    second_client->username = "";
+    second_client->nickname = "qoops";
+    second_client->username = "qoops";
     second_client->has_valid_pwd = true;
-    second_client->is_registered = false;
+    second_client->is_registered = true;
 
     app.add_client(first_client);
     app.add_client(second_client);
+    channel->add_client(first_client->nickname);
+    channel->add_client(second_client->nickname);
+    app.add_channel(channel);
+
 
     std::string msg_string;
     if (argc == 2)
@@ -45,13 +50,14 @@ int main(int argc, char **argv)
 
     int res;
     Message msg;
-    res = app.parse_message(*second_client, msg_string, msg);
+    res = app.parse_message(*first_client, msg_string, msg);
+    printMsg(msg);
     if (res == -1)
         std::cout << "Ignore" << std::endl;
     else
     {
-        app.run_message(*second_client, msg);
+        app.run_message(*first_client, msg);
     }
-    delete first_client, second_client;
+    delete first_client, second_client, channel;
     return 0;
 }

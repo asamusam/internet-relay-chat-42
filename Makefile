@@ -6,7 +6,7 @@ SRC := \
 	src/InternalError.cpp \
 	src/SystemCallErrorMessage.cpp \
 	src/connection.cpp \
-	src/ircserv.cpp \
+	src/main.cpp \
 	# src/parser.cpp \
 #SRC
 

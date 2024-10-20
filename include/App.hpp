@@ -20,6 +20,7 @@ class App
         };
         static const int nick_max_len = 9;
         static const int user_max_len = 12;
+        static const int client_channel_limit = 10;
 
     private:
         std::string server_name;

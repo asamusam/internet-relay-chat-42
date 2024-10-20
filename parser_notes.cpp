@@ -34,3 +34,17 @@ A numeric reply is not allowed to originate
 from a client; any such messages received by a server are silently
 dropped.
 */
+
+
+/* JOIN
+To create a new channel or become part of an existing channel, a user
+is required to JOIN the channel.  If the channel doesn't exist prior
+to joining, the channel is created and the creating user becomes a
+channel operator.  If the channel already exists, whether or not your
+request to JOIN that channel is honoured depends on the current modes
+of the channel. For example, if the channel is invite-only, (+i),
+then you may only join if invited.  As part of the protocol, a user
+may be a part of several channels at once, but a limit of ten (10)
+channels is recommended as being ample for both experienced and
+novice users.
+*/

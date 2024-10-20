@@ -11,6 +11,7 @@ struct Client
     bool has_valid_pwd;
     std::string username;
     std::string nickname;
+    int num_channels;
 };
 
 #endif // CLIENT_HPP

@@ -23,5 +23,15 @@
     - TLS
     - Preventing flooding
     - Logs
-    - Configuration file
+    - Configuration file:
+        * A server should use some sort of 'access control list' (either in the
+        configuration file or elsewhere) that is read at startup and used to
+        decide what hosts clients may use to connect to it.
+        Both 'deny' and 'allow' should be implemented to provide the required
+        flexibility for host access control.
+        * Storage of oper passwords in configuration files is preferable to hard coding
+        them in and should be stored in a crypted format (ie using crypt(3)
+        from Unix) to prevent easy theft.
     - Limit number of attemps for the PASS command
+8. Other enhancements
+    - RPL_ISUPPORT

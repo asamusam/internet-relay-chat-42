@@ -9,3 +9,8 @@ Questions and things to discuss
    Current behavior is to ignore such messages.
 4. Future security enhancements: limit the number of attempts to send PASS command
    and store the password in the configuration file.
+
+
+What if the channel is invite only and key enabled at the same time?
+Can you invite users to a channel that is already full?
+Can the invitation be revoked or does the user just hangs in invited indefinitely?

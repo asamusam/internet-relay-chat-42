@@ -36,6 +36,20 @@ App::App(std::string const &name, std::string const &password) : server_name(nam
     error_messages[ERR_CANNOTSENDTOCHAN] = "<channel name> :Cannot send to channel";
     error_messages[ERR_TOOMANYTARGETS]   = "<target> :Duplicate recipients. No message delivered";
     error_messages[ERR_NOSUCHNICK]       = "<nickname> :No such nick/channel";
+    error_messages[ERR_NOSUCHCHANNEL]    = "<channel> :No such channel";
+    error_messages[ERR_TOOMANYCHANNELS]  = "<channel> :You have joined too many channels";
+    error_messages[ERR_INVITEONLYCHAN]   = "<channel> :Cannot join channel (invite only)";
+    error_messages[ERR_BANNEDFROMCHAN]   = "<channel> :Cannot join channel (banned)";
+    error_messages[ERR_CHANNELISFULL]    = "<channel> :Cannot join channel (channel is full)";
+    error_messages[ERR_BADCHANNELKEY]    = "<channel> :Cannot join channel (incorrect channel key)";
+    error_messages[ERR_USERONCHANNEL]    = "<user> <channel> :is already on channel";
+    error_messages[ERR_USERNOTINCHANNEL] = "<user> <channel> :They are not on that channel";
+    error_messages[ERR_NOTONCHANNEL]     = "<channel> :You're not on that channel";
+    error_messages[ERR_CHANOPRIVSNEEDED] = "<channel> :You're not channel operator";
+    error_messages[ERR_KEYSET]           = "<channel> :Channel key already set";
+    error_messages[ERR_UNKNOWNMODE]      = "<char> :is unknown mode char to me for <channel>";
+    error_messages[ERR_NOPRIVILEGES]     = ":Permission Denied- You're not an IRC operator";
+    error_messages[ERR_USERSDONTMATCH]   = ":Cannot change mode for other users";
 }
 
 void App::add_client(Client *new_client)
@@ -45,7 +59,7 @@ void App::add_client(Client *new_client)
 
 void App::add_channel(Channel *new_channel)
 {
-    channels[new_channel->get_name()] = new_channel;
+    channels[new_channel->name] = new_channel;
 }
 
 /*
@@ -185,10 +199,71 @@ void App::user(Client &user, std::vector<std::string> const &params)
     //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
 }
 
+/*
+Parameters: <channel> [<key>]
+*/
 void App::join(Client &user, std::vector<std::string> const &params)
 {
+    std::map<std::string, Channel *>::iterator channel_it;
+    Channel *channel;
+
     if (!user.is_registered)
         return ;
+    if (params.empty())
+    {
+        send_numeric_reply(user, ERR_NEEDMOREPARAMS, "JOIN");
+        return ;
+    }
+    if (user.num_channels == this->client_channel_limit)
+    {
+        send_numeric_reply(user, ERR_TOOMANYCHANNELS, params[0].c_str());
+        return ;
+    }
+    channel_it = channels.find(params[0]);
+    if (channel_it != channels.end())
+    {
+        channel = channel_it->second;
+        if (channel->has_user(user.nickname))
+            return ;
+        if (channel->is_invite_only() && !channel->is_invited_user(user.nickname))
+        {
+            send_numeric_reply(user, ERR_INVITEONLYCHAN, channel->name.c_str());
+            return ;
+        }
+        if (channel->is_full())
+        {
+            send_numeric_reply(user, ERR_CHANNELISFULL, channel->name.c_str());
+            return ;
+        }
+        if (channel->is_key_protected())
+        {
+            if (params.size() < 2)
+            {
+                send_numeric_reply(user, ERR_NEEDMOREPARAMS, "JOIN");
+                return ;
+            }
+            if (!channel->is_matching_key(params[1]))
+            {
+                send_numeric_reply(user, ERR_BADCHANNELKEY, channel->name.c_str());
+                return ;
+            }
+        }
+        channel->add_client(user.nickname);
+        std::cout << user.nickname << " joined " << channel->name << std::endl;
+        // send RPL_TOPIC
+        // send RPL_NAMREPLY
+    }
+    else
+    {
+        // try create a channel
+            // if name is invalid
+                // ERR_BADCHANMASK
+        // add channel to the list of channels
+        // add user to the channel
+        // send RPL_TOPIC
+        // send RPL_NAMREPLY
+        // make the user channel operator
+    }
 }
 
 // TODO: make a template
@@ -277,6 +352,8 @@ void App::kick(Client &user, std::vector<std::string> const &params)
         return ;
 }
 
+/*
+*/
 void App::invite(Client &user, std::vector<std::string> const &params)
 {
     if (!user.is_registered)
@@ -295,6 +372,7 @@ void App::mode(Client &user, std::vector<std::string> const &params)
         return ;
 }
 
+// TODO: multiple vars and smarter substitution
 void App::send_numeric_reply(Client const &user, int err, char const *var) const
 {
     std::string err_msg;

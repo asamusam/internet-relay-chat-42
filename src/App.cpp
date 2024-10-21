@@ -372,6 +372,16 @@ void App::mode(Client &user, std::vector<std::string> const &params)
         return ;
 }
 
+Client *App::find_client_by_fd(int fd) const
+{
+    for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
+    {
+        if (i->second->fd == fd)
+            return i->second;
+    }
+    return NULL;
+}
+
 // TODO: multiple vars and smarter substitution
 void App::send_numeric_reply(Client const &user, int err, char const *var) const
 {

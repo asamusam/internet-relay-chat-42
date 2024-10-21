@@ -41,7 +41,6 @@ int main(int argc, char **argv)
     channel->add_client(second_client->nickname);
     app.add_channel(channel);
 
-
     std::string msg_string;
     if (argc == 2)
         msg_string = argv[1];
@@ -58,6 +57,8 @@ int main(int argc, char **argv)
     {
         app.execute_message(*first_client, msg);
     }
-    delete first_client, second_client, channel;
+    delete first_client;
+    delete second_client; 
+    delete channel;
     return 0;
 }

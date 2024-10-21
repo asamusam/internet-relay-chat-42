@@ -56,7 +56,7 @@ int main(int argc, char **argv)
         std::cout << "Ignore" << std::endl;
     else
     {
-        app.run_message(*first_client, msg);
+        app.execute_message(*first_client, msg);
     }
     delete first_client, second_client, channel;
     return 0;

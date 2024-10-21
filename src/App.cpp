@@ -394,7 +394,7 @@ void App::send_numeric_reply(Client const &user, int err, char const *var) const
 /*
 Runs the command and sends appropriate replies.
 */
-void App::run_message(Client &user, Message const &msg)
+void App::execute_message(Client &user, Message const &msg)
 {
     std::string reply;
     

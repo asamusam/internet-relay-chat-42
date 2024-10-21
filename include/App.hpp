@@ -37,7 +37,7 @@ class App
         void add_channel(Channel *new_channel);
 
         int parse_message(Client &user, std::string const &msg_string, Message &msg) const;
-        void run_message(Client &user, Message const &msg);
+        void execute_message(Client &user, Message const &msg);
         
 
         void pass(Client &user, std::vector<std::string> const &params);

@@ -5,6 +5,8 @@
 #include <netinet/in.h>
 #include <sstream>
 #include <sys/epoll.h>
+#include "App.hpp"
+#include "Client.hpp"
 #include "InternalError.hpp"
 #include "SystemCallErrorMessage.hpp"
 #include "connection.hpp"
@@ -76,6 +78,7 @@ void accept_in_conns(int epoll_fd, int listen_sock_fd)
 		std::cerr << "Error while trying to accept outside connection (accept4()): " << std::strerror(errno) << "\n";
 		return ;
 		// TODO: Handle error approprately ? should be handled by conn_loop();
+		/* throw (SCEM_ACCEPT4); */
 	}
 
 	ev.events = EPOLLIN;
@@ -85,5 +88,50 @@ void accept_in_conns(int epoll_fd, int listen_sock_fd)
 		std::cerr << "Error while trying to accept outside connection (accept4()): " << std::strerror(errno) << "\n";
 		return ;
 		// TODO: Handle error approprately ? should be handled by conn_loop();
+		/* throw (SCEM_EPOLL_CTL); */
 	}
+}
+
+void handle_msg(App &app, Client *client)
+{
+	char buff[MAX_MSG_SIZE];
+	std::string &msg = client->msg_buff;
+	ssize_t bytes_read;
+	size_t crlf_indx;
+
+	do
+	{
+		Message message; // Do we need this?
+		bytes_read = recv(client->fd, buff, sizeof buff, 0);
+		if (-1 ==  bytes_read)
+			return ;
+			// TODO: Handle error approprately ? should be handled by conn_loop();
+			/* throw (SCEM_RECV); */
+		msg.append(buff);
+		crlf_indx = msg.find(CRLF);
+
+		if ((crlf_indx == msg.npos && msg.size() >= MAX_MSG_SIZE) || crlf_indx > MAX_MSG_SIZE - 2)
+		{
+			msg.erase(MAX_MSG_SIZE);
+			if (-1 == app.parse_message(*client, client->msg_buff, message))
+			{
+				// TODO: Handle error approprately
+			}
+			app.execute_message(*client, message);
+			msg.clear();
+			continue ;
+		}
+
+		while (not msg.empty() && crlf_indx != msg.npos)
+		{
+			if (-1 == app.parse_message(*client, client->msg_buff.substr(0, crlf_indx), message))
+			{
+				// TODO: Handle error approprately
+			}
+			app.execute_message(*client, message);
+			msg.erase(0, crlf_indx + 2);
+			crlf_indx = msg.find(CRLF);
+		}
+	}
+	while (bytes_read && crlf_indx != msg.npos);
 }

@@ -29,11 +29,7 @@ void conn_loop(App &app, int listen_sock_fd)
 			if (fd == listen_sock_fd)
 				accept_in_conns(epoll_fd, listen_sock_fd);
 			else
-			{
-				/* if (1 == fill_msg_buff(Client client)) */
-				/* 	continue; */
-				// parse & run
-			}
+				handle_msg(app.find_client_by_fd(fd));
 		}
 	}
 }

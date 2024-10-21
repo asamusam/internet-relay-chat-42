@@ -5,15 +5,15 @@
 #include "InternalError.hpp"
 #include "SystemCallErrorMessage.hpp"
 #include "connection.hpp"
-#include "ircserv.hpp"
+#include "Client.hpp"
+#include "App.hpp"
 
-void conn_loop(int port)
+void conn_loop(App &app, int listen_sock_fd)
 {
 	int nfds = 0;
 	struct epoll_event events[ConnConst::max_events];
 	(void) std::memset(events, 0, sizeof(events));
 
-	int listen_sock_fd = listen_sock_init(port);
 	int epoll_fd = epoll_init(listen_sock_fd);
 
 	for (;;)
@@ -24,11 +24,15 @@ void conn_loop(int port)
 
 		for (int i = 0; i < nfds; ++i)
 		{
-			if (events[i].data.fd == listen_sock_fd)
+			int fd = events[i].data.fd;
+
+			if (fd == listen_sock_fd)
 				accept_in_conns(epoll_fd, listen_sock_fd);
 			else
 			{
-				// TODO: deal with the data;
+				/* if (1 == fill_msg_buff(Client client)) */
+				/* 	continue; */
+				// parse & run
 			}
 		}
 	}
@@ -45,7 +49,11 @@ int main(int argc, char **argv)
 		if (password.size() < 8 || password.size() > 32)
 			throw (IEC_BADPASS);
 
-		conn_loop(parse_port(argv[1]));
+		int listen_sock_fd = listen_sock_init(parse_port(argv[1]));
+
+		App app("ft_irc", password);
+
+		conn_loop(app, listen_sock_fd);
 	}
 	catch (internal_error_code iec)
 	{

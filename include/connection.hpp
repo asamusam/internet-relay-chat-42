@@ -1,6 +1,7 @@
 #ifndef CONNECTION_HPP
 #define CONNECTION_HPP
 
+#include "App.hpp"
 #include "Client.hpp"
 
 #define NO_TIMEOUT -1
@@ -18,7 +19,7 @@ class ConnConst
 int parse_port(char *s);
 int listen_sock_init(int port);
 int epoll_init(int listen_sock_fd);
-void accept_in_conns(int epoll_fd, int listen_sock_fd);
-void handle_msg(Client *client);
+void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd);
+void handle_msg(App &app, Client *client);
 
 #endif /* CONNECTION_HPP */

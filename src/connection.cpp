@@ -66,13 +66,12 @@ int epoll_init(int listen_sock_fd)
 	return (ep_fd);
 }
 
-void accept_in_conns(int epoll_fd, int listen_sock_fd)
+void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 {
-	int conn_sock_fd = -1;
 	epoll_event ev;
 	(void) std::memset(&ev, 0, sizeof(ev));
 
-	conn_sock_fd = accept4(listen_sock_fd, NULL, NULL, SOCK_NONBLOCK);	
+	int conn_sock_fd = accept4(listen_sock_fd, NULL, NULL, SOCK_NONBLOCK);	
 	if (-1 == conn_sock_fd)
 	{
 		std::cerr << "Error while trying to accept outside connection (accept4()): " << std::strerror(errno) << "\n";
@@ -90,6 +89,13 @@ void accept_in_conns(int epoll_fd, int listen_sock_fd)
 		// TODO: Handle error approprately ? should be handled by conn_loop();
 		/* throw (SCEM_EPOLL_CTL); */
 	}
+
+	Client *client = new Client;
+	client->fd = conn_sock_fd;
+	client->is_registered = false;
+	client->has_valid_pwd = false;
+	client->num_channels = 0;
+	app.add_client(client);
 }
 
 void handle_msg(App &app, Client *client)
@@ -98,14 +104,14 @@ void handle_msg(App &app, Client *client)
 	std::string &msg = client->msg_buff;
 	ssize_t bytes_read;
 	size_t crlf_indx;
+	Message message;
 
 	do
 	{
-		Message message; // Do we need this?
 		bytes_read = recv(client->fd, buff, sizeof buff, 0);
 		if (-1 ==  bytes_read)
 			return ;
-			// TODO: Handle error approprately ? should be handled by conn_loop();
+			// TODO: Handle error approprately
 			/* throw (SCEM_RECV); */
 		msg.append(buff);
 		crlf_indx = msg.find(CRLF);

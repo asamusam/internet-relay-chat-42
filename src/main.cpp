@@ -2,11 +2,10 @@
 #include <cstring>
 #include <iostream>
 #include <sys/epoll.h>
+#include "App.hpp"
 #include "InternalError.hpp"
 #include "SystemCallErrorMessage.hpp"
 #include "connection.hpp"
-#include "Client.hpp"
-#include "App.hpp"
 
 void conn_loop(App &app, int listen_sock_fd)
 {
@@ -27,9 +26,9 @@ void conn_loop(App &app, int listen_sock_fd)
 			int fd = events[i].data.fd;
 
 			if (fd == listen_sock_fd)
-				accept_in_conns(epoll_fd, listen_sock_fd);
+				accept_in_conns(app, epoll_fd, listen_sock_fd);
 			else
-				handle_msg(app.find_client_by_fd(fd));
+				handle_msg(app, app.find_client_by_fd(fd));
 		}
 	}
 }

@@ -1,7 +1,10 @@
 #ifndef ERROR_HPP
 #define ERROR_HPP
 
-enum IRCErrors {
+enum IRCReplies {
+    RPL_TOPIC = 332,
+    RPL_INVITING = 341,
+    RPL_NAMREPLY = 353,
     ERR_NOSUCHNICK = 401,
     ERR_NOSUCHCHANNEL = 403,
     ERR_CANNOTSENDTOCHAN = 404,

@@ -54,7 +54,7 @@ class App
         Client *find_client_by_nick(std::string const &nick) const;
         Client *find_client_by_fd(int fd) const;
 
-        void send_numeric_reply(Client const &user, int err, char const *var) const;
+        void send_numeric_reply(Client const &user, int err, std::vector<std::string> const &vars) const;
         void send_msg_to_targets(Client const &user, std::string const &msg, std::vector<std::string> const &targets) const;
         int send_message(Client const &user, std::string const &message) const;
 };

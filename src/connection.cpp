@@ -73,22 +73,12 @@ void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 
 	int conn_sock_fd = accept4(listen_sock_fd, NULL, NULL, SOCK_NONBLOCK);	
 	if (-1 == conn_sock_fd)
-	{
-		std::cerr << "Error while trying to accept outside connection (accept4()): " << std::strerror(errno) << "\n";
-		return ;
-		// TODO: Handle error approprately ? should be handled by conn_loop();
-		/* throw (SCEM_ACCEPT4); */
-	}
+		throw (SCEM_ACCEPT4);
 
 	ev.events = EPOLLIN;
 	ev.data.fd = conn_sock_fd;
 	if (-1 == epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn_sock_fd, &ev))
-	{
-		std::cerr << "Error while trying to accept outside connection (accept4()): " << std::strerror(errno) << "\n";
-		return ;
-		// TODO: Handle error approprately ? should be handled by conn_loop();
-		/* throw (SCEM_EPOLL_CTL); */
-	}
+		throw (SCEM_EPOLL_CTL);
 
 	Client *client = new Client;
 	client->fd = conn_sock_fd;
@@ -101,6 +91,7 @@ void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 void handle_msg(App &app, Client *client)
 {
 	char buff[MAX_MSG_SIZE];
+	std::memset(buff, 0, sizeof buff);
 	std::string &msg = client->msg_buff;
 	ssize_t bytes_read;
 	size_t crlf_indx;
@@ -110,9 +101,7 @@ void handle_msg(App &app, Client *client)
 	{
 		bytes_read = recv(client->fd, buff, sizeof buff, 0);
 		if (-1 ==  bytes_read)
-			return ;
-			// TODO: Handle error approprately
-			/* throw (SCEM_RECV); */
+			throw (SCEM_RECV);
 		msg.append(buff);
 		crlf_indx = msg.find(CRLF);
 
@@ -120,21 +109,21 @@ void handle_msg(App &app, Client *client)
 		{
 			msg.erase(MAX_MSG_SIZE);
 			if (-1 == app.parse_message(*client, client->msg_buff, message))
-			{
-				// TODO: Handle error approprately
-			}
-			app.execute_message(*client, message);
+				std::cerr << "Cannot parse message: " << client->msg_buff << "\n";
+			else
+				app.execute_message(*client, message);
 			msg.clear();
 			continue ;
 		}
 
 		while (not msg.empty() && crlf_indx != msg.npos)
 		{
-			if (-1 == app.parse_message(*client, client->msg_buff.substr(0, crlf_indx), message))
-			{
-				// TODO: Handle error approprately
-			}
-			app.execute_message(*client, message);
+			std::string msg_substr = msg.substr(0, crlf_indx);
+
+			if (-1 == app.parse_message(*client, msg_substr, message))
+				std::cerr << "Cannot parse message: " << msg_substr << "\n";
+			else
+				app.execute_message(*client, message);
 			msg.erase(0, crlf_indx + 2);
 			crlf_indx = msg.find(CRLF);
 		}

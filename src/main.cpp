@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include <sys/epoll.h>
+#include <unistd.h>
 #include "App.hpp"
 #include "InternalError.hpp"
 #include "SystemCallErrorMessage.hpp"
@@ -25,12 +26,26 @@ void conn_loop(App &app, int listen_sock_fd)
 		{
 			int fd = events[i].data.fd;
 
-			if (fd == listen_sock_fd)
-				accept_in_conns(app, epoll_fd, listen_sock_fd);
-			else
-				handle_msg(app, app.find_client_by_fd(fd));
+			try
+			{
+				if (fd == listen_sock_fd)
+					accept_in_conns(app, epoll_fd, listen_sock_fd);
+				else
+					handle_msg(app, app.find_client_by_fd(fd));
+			}
+			catch (scem_function sf)
+			{
+				std::cerr << "System error while trying to handle connection: "
+					<< SystemCallErrorMessage::get_func_name(sf) << "\n";
+			}
+			catch (std::out_of_range &e)
+			{
+				std::cerr << "Error while manupulating strings" << e.what() << "\n";
+			}
 		}
 	}
+
+	close(listen_sock_fd);
 }
 
 int main(int argc, char **argv)
@@ -41,7 +56,7 @@ int main(int argc, char **argv)
 			throw (IEC_BADARGC);
 
 		std::string password(argv[2]);
-		if (password.size() < 8 || password.size() > 32)
+		if (password.size() < 4 || password.size() > 32)
 			throw (IEC_BADPASS);
 
 		int listen_sock_fd = listen_sock_init(parse_port(argv[1]));
@@ -49,6 +64,7 @@ int main(int argc, char **argv)
 		App app("ft_irc", password);
 
 		conn_loop(app, listen_sock_fd);
+
 	}
 	catch (internal_error_code iec)
 	{

@@ -373,11 +373,35 @@ Parameters: <nick> <channel>
 */
 void App::invite(Client &user, std::vector<std::string> const &params)
 {
-    (void)user;
-    (void)params;
+    std::map<std::string, std::string> info;
+    std::map<std::string, Channel *>::const_iterator channel_it;
+    Client *recipient;
+    std::string invitation_msg;
     
     if (!user.is_registered)
         return ;
+    info["command"] = "INVITE";
+    if (params.size() < 2)
+        return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
+    info["nick"] = params[0];
+    info["user"] = params[0];
+    info["channel"] = params[1];
+    recipient = find_client_by_nick(info["nick"]);
+    if (!recipient)
+        return send_numeric_reply(user, ERR_NOSUCHNICK, info);
+    channel_it = channels.find(info["channel"]);
+    if (channel_it == channels.end())
+        return send_numeric_reply(user, ERR_NOSUCHCHANNEL, info);
+    if (!channel_it->second->is_on_channel(user.nickname))
+        return send_numeric_reply(user, ERR_NOTONCHANNEL, info);
+    if (channel_it->second->is_invite_only() && !channel_it->second->is_channel_operator(user.nickname))
+        return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
+    if (channel_it->second->is_on_channel(info["nick"]))
+        return send_numeric_reply(user, ERR_USERONCHANNEL, info);
+    channel_it->second->add_invitation(info["nick"]);
+    invitation_msg = ':' + user.nickname + " INVITE " + info["nick"] + ' ' + info["channel"];
+    send_message(*recipient, invitation_msg);
+    send_numeric_reply(user, RPL_INVITING, info);
 }
 
 void App::topic(Client &user, std::vector<std::string> const &params)

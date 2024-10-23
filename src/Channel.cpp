@@ -66,7 +66,7 @@ bool Channel::is_invite_only(void) const
     return mode.find('i')->second;
 }
 
-bool Channel::is_invited_user(std::string const &nick) const
+bool Channel::is_invited(std::string const &nick) const
 {
     if (std::find(invitations.begin(), invitations.end(), nick) == invitations.end())
         return false;

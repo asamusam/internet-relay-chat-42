@@ -7,10 +7,6 @@
 Channel::Channel(std::string const &name)
 {
     this->name = name;
-    mode['i'] = false;
-    mode['t'] = false;
-    mode['k'] = false;
-    mode['l'] = false;
     user_limit = std::numeric_limits<unsigned int>::max();
 }
 
@@ -63,7 +59,9 @@ std::string Channel::get_client_nicks_str(void) const
 
 bool Channel::is_invite_only(void) const
 {
-    return mode.find('i')->second;
+    if (mode.find('i') == std::string::npos)
+        return false;
+    return true;
 }
 
 bool Channel::is_invited(std::string const &nick) const
@@ -107,9 +105,9 @@ void Channel::remove_operator(std::string const &nick)
 
 bool Channel::is_full(void) const
 {
-    if (mode.find('l')->second)
+    if (mode.find('l') == std::string::npos)
+        return false;
         return clients.size() == user_limit;
-    return false;
 }
 
 void Channel::set_user_limit(int limit)
@@ -119,7 +117,9 @@ void Channel::set_user_limit(int limit)
 
 bool Channel::is_key_protected(void) const
 {
-    return mode.find('k')->second;
+    if (mode.find('k') == std::string::npos)
+        return false;
+    return true;
 }
 
 // TODO: hashing?
@@ -142,4 +142,20 @@ bool Channel::is_channel_operator(std::string const &nick) const
     if (std::find(operators.begin(), operators.end(), nick) == operators.end())
         return false;
     return true;
+}
+
+void Channel::add_mode(char new_mode)
+{
+    if (mode.find(new_mode) == std::string::npos)
+        mode.insert(mode.end(), new_mode);
+}
+
+void Channel::remove_mode(char new_mode)
+{
+    size_t index;
+
+    index = mode.find(new_mode);
+    if (index == std::string::npos)
+        return;
+    mode.erase(index);
 }

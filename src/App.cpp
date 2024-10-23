@@ -224,9 +224,9 @@ void App::join(Client &user, std::vector<std::string> const &params)
     if (channel_it != channels.end())
     {
         channel = channel_it->second;
-        if (channel->has_user(user.nickname))
+        if (channel->is_on_channel(user.nickname))
             return ;
-        if (channel->is_invite_only() && !channel->is_invited_user(user.nickname))
+        if (channel->is_invite_only() && !channel->is_invited(user.nickname))
             return send_numeric_reply(user, ERR_INVITEONLYCHAN, info);
         if (channel->is_full())
             return send_numeric_reply(user, ERR_CHANNELISFULL, info);
@@ -336,15 +336,41 @@ void App::privmsg(Client &user, std::vector<std::string> const &params)
     send_msg_to_targets(user, params[1], targets);
 }
 
+/*
+Parameters: <channel> <user> [<comment>]
+*/
 void App::kick(Client &user, std::vector<std::string> const &params)
 {
-    (void)user;
-    (void)params;
+    std::map<std::string, std::string> info;
+    std::map<std::string, Channel *>::const_iterator channel_it;
 
     if (!user.is_registered)
         return ;
+    info["command"] = "KICK";
+    if (params.size() < 2)
+        return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
+    info["channel"] = params[0];
+    info["user"] = params[1];
+    channel_it = channels.find(info["channel"]);
+    if (channel_it == channels.end())
+        return send_numeric_reply(user, ERR_NOSUCHCHANNEL, info);
+    if (!channel_it->second->is_on_channel(user.nickname))
+        return send_numeric_reply(user, ERR_NOTONCHANNEL, info);
+    if (!channel_it->second->is_channel_operator(user.nickname))
+        return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
+    if (!channel_it->second->is_on_channel(info["user"]))
+        return send_numeric_reply(user, ERR_USERNOTINCHANNEL, info);
+    channel_it->second->remove_client(info["user"]);
+    if (channel_it->second->get_client_count() == 0)
+    {
+        delete channel_it->second;
+        channels.erase(channel_it->first);
+    }
 }
 
+/*
+Parameters: <nick> <channel>
+*/
 void App::invite(Client &user, std::vector<std::string> const &params)
 {
     (void)user;

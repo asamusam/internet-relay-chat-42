@@ -24,10 +24,22 @@ std::string Channel::get_topic(void) const
     return topic;
 }
 
+int Channel::get_client_count(void) const
+{
+    return clients.size();
+}
+
 void Channel::add_client(std::string const &nick)
 {
-    if (std::find(clients.begin(), clients.end(), nick) == clients.end())
         clients.push_back(nick);
+}
+
+void Channel::remove_client(std::string const &nick)
+{
+    std::vector<std::string>::iterator it;
+
+    it = std::find(clients.begin(), clients.end(), nick);
+    clients.erase(it);
 }
 
 std::vector<std::string> const &Channel::get_client_nicks(void) const
@@ -118,10 +130,16 @@ bool Channel::is_matching_key(std::string const &key) const
     return false;
 }
 
-bool Channel::has_user(std::string const &nick) const
+bool Channel::is_on_channel(std::string const &nick) const
 {
     if (std::find(clients.begin(), clients.end(), nick) == clients.end())
         return false;
     return true;
 }
 
+bool Channel::is_channel_operator(std::string const &nick) const
+{
+    if (std::find(operators.begin(), operators.end(), nick) == operators.end())
+        return false;
+    return true;
+}

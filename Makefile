@@ -1,13 +1,14 @@
 CXX := c++
 INCLUDE := include
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98 -I$(INCLUDE)
-DBCXXFLAGS := -Og -ggdb3 -Wpedantic $(CXXFLAGS)
+DBCXXFLAGS := -Og -ggdb3 $(CXXFLAGS)
 SRC := \
+	src/App.cpp \
+	src/Channel.cpp \
 	src/InternalError.cpp \
 	src/SystemCallErrorMessage.cpp \
 	src/connection.cpp \
 	src/main.cpp \
-	# src/parser.cpp \
 #SRC
 
 OBJ := $(SRC:.cpp=.o)

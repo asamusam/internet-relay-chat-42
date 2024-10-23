@@ -19,7 +19,7 @@ class Channel
         std::string key;
         std::vector<std::string> clients;
         std::vector<std::string> operators;
-        std::vector<std::string> invited;
+        std::vector<std::string> invitations;
         std::map<char, bool> mode;
         unsigned int user_limit;
 
@@ -35,7 +35,8 @@ class Channel
         void set_user_limit(int limit);
 
         void add_client(std::string const &nick);
-        std::vector<std::string> const &get_clients(void) const;
+        std::vector<std::string> const &get_client_nicks(void) const;
+        std::string get_client_nicks_str(void) const;
 
         bool is_invite_only(void) const;
         bool is_full(void) const;
@@ -46,8 +47,11 @@ class Channel
         bool is_matching_key(std::string const &key) const;
         bool is_valid_channel_name(std::string const &name) const;
 
-        void add_to_invited(std::string const &nick);
-        void remove_from_invited(std::string const &nick);
+        void add_invitation(std::string const &nick);
+        void remove_invitation(std::string const &nick);
+
+        void add_operator(std::string const &nick);
+        void remove_operator(std::string const &nick);
 };
 
 #endif // CHANNEL_HPP

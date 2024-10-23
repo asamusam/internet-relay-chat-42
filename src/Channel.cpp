@@ -1,13 +1,11 @@
 #include "Channel.hpp"
-#include "Errors.hpp"
+#include "IRCReply.hpp"
 
 #include <algorithm>
 #include <limits>
 
 Channel::Channel(std::string const &name)
 {
-    if (!is_valid_channel_name(name))
-        throw ERR_BADCHANMASK;
     this->name = name;
     mode['i'] = false;
     mode['t'] = false;
@@ -32,22 +30,23 @@ void Channel::add_client(std::string const &nick)
         clients.push_back(nick);
 }
 
-std::vector<std::string> const &Channel::get_clients(void) const
+std::vector<std::string> const &Channel::get_client_nicks(void) const
 {
     return clients;
 }
 
-/*
-Channels names are strings (beginning with a '&' or '#' character) of
-   length up to 200 characters.  Apart from the the requirement that the
-   first character being either '&' or '#'; the only restriction on a
-   channel name is that it may not contain any spaces (' '), a control G
-   (^G or ASCII 7), or a comma (',' which is used as a list item
-   separator by the protocol).
-*/
-bool Channel::is_valid_channel_name(std::string const &name) const
+std::string Channel::get_client_nicks_str(void) const
 {
-    return true;
+    std::string res;
+
+    for (std::vector<std::string>::const_iterator i = clients.begin(); i < clients.end(); i++)
+    {
+        if (i < clients.end() - 1)
+            res += *i + ' ';
+        else
+            res += *i;
+    }
+    return res;
 }
 
 bool Channel::is_invite_only(void) const
@@ -57,25 +56,41 @@ bool Channel::is_invite_only(void) const
 
 bool Channel::is_invited_user(std::string const &nick) const
 {
-    if (std::find(invited.begin(), invited.end(), nick) == invited.end())
+    if (std::find(invitations.begin(), invitations.end(), nick) == invitations.end())
         return false;
     return true;
 }
 
-void Channel::add_to_invited(std::string const &nick)
+void Channel::add_invitation(std::string const &nick)
 {
-    if (std::find(invited.begin(), invited.end(), nick) == invited.end())
-        invited.push_back(nick);
+    if (std::find(invitations.begin(), invitations.end(), nick) == invitations.end())
+        invitations.push_back(nick);
 }
 
-void Channel::remove_from_invited(std::string const &nick)
+void Channel::remove_invitation(std::string const &nick)
 {
     std::vector<std::string>::iterator it;
 
-    it = std::find(invited.begin(), invited.end(), nick);
-    if (it == invited.end())
+    it = std::find(invitations.begin(), invitations.end(), nick);
+    if (it == invitations.end())
         return ;
-    invited.erase(it);
+    invitations.erase(it);
+}
+
+void Channel::add_operator(std::string const &nick)
+{
+    if (std::find(operators.begin(), operators.end(), nick) == operators.end())
+        operators.push_back(nick);
+}
+
+void Channel::remove_operator(std::string const &nick)
+{
+    std::vector<std::string>::iterator it;
+
+    it = std::find(operators.begin(), operators.end(), nick);
+    if (it == operators.end())
+        return ;
+    operators.erase(it);
 }
 
 bool Channel::is_full(void) const

@@ -23,33 +23,24 @@ App::App(std::string const &name, std::string const &password) : server_name(nam
     commands.push_back((Command){"INVITE",  &App::invite});
     commands.push_back((Command){"TOPIC",   &App::topic});
     commands.push_back((Command){"MODE",    &App::mode});
+}
 
-    error_messages[ERR_UNKNOWNCOMMAND]   = "<command> :Unknown command";
-    error_messages[ERR_NEEDMOREPARAMS]   = "<command> :Not enough parameters";
-    error_messages[ERR_ALREADYREGISTRED] = ":You may not reregister";
-    error_messages[ERR_PASSWDMISMATCH]   = ":Password incorrect";
-    error_messages[ERR_NICKNAMEINUSE]    = "<nick> :Nickname is already in use";
-    error_messages[ERR_NONICKNAMEGIVEN]  = ":No nickname given";
-    error_messages[ERR_ERRONEUSNICKNAME] = "<nick> :Erroneus nickname";
-    error_messages[ERR_NORECIPIENT]      = ":No recipient given (<command>)";
-    error_messages[ERR_NOTEXTTOSEND]     = ":No text to send";
-    error_messages[ERR_CANNOTSENDTOCHAN] = "<channel name> :Cannot send to channel";
-    error_messages[ERR_TOOMANYTARGETS]   = "<target> :Duplicate recipients. No message delivered";
-    error_messages[ERR_NOSUCHNICK]       = "<nickname> :No such nick/channel";
-    error_messages[ERR_NOSUCHCHANNEL]    = "<channel> :No such channel";
-    error_messages[ERR_TOOMANYCHANNELS]  = "<channel> :You have joined too many channels";
-    error_messages[ERR_INVITEONLYCHAN]   = "<channel> :Cannot join channel (invite only)";
-    error_messages[ERR_BANNEDFROMCHAN]   = "<channel> :Cannot join channel (banned)";
-    error_messages[ERR_CHANNELISFULL]    = "<channel> :Cannot join channel (channel is full)";
-    error_messages[ERR_BADCHANNELKEY]    = "<channel> :Cannot join channel (incorrect channel key)";
-    error_messages[ERR_USERONCHANNEL]    = "<user> <channel> :is already on channel";
-    error_messages[ERR_USERNOTINCHANNEL] = "<user> <channel> :They are not on that channel";
-    error_messages[ERR_NOTONCHANNEL]     = "<channel> :You're not on that channel";
-    error_messages[ERR_CHANOPRIVSNEEDED] = "<channel> :You're not channel operator";
-    error_messages[ERR_KEYSET]           = "<channel> :Channel key already set";
-    error_messages[ERR_UNKNOWNMODE]      = "<char> :is unknown mode char to me for <channel>";
-    error_messages[ERR_NOPRIVILEGES]     = ":Permission Denied- You're not an IRC operator";
-    error_messages[ERR_USERSDONTMATCH]   = ":Cannot change mode for other users";
+App::~App()
+{
+    free_channels();
+    free_clients();
+}
+
+void App::free_clients(void)
+{
+    for (std::map<int, Client *>::iterator it = clients.begin(); it != clients.end(); it++)
+        delete it->second;
+}
+
+void App::free_channels(void)
+{
+    for (std::map<std::string, Channel *>::iterator it = channels.begin(); it != channels.end(); it++)
+        delete it->second;
 }
 
 void App::add_client(Client *new_client)
@@ -73,22 +64,20 @@ to the same result until the correct password is set.
 */
 void App::pass(Client &user, std::vector<std::string> const &params)
 {
+    std::map<std::string, std::string> info;
+
     if (user.is_registered)
-    {
-        send_numeric_reply(user, ERR_ALREADYREGISTRED, NULL);
-        return ;
-    }
+        return send_numeric_reply(user, ERR_ALREADYREGISTRED, info);
     if (params.empty())
     {
-        send_numeric_reply(user, ERR_NEEDMOREPARAMS, "PASS");
-        return ;
+        info["command"] = "PASS";
+        return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
     }
     if (params[0] != this->server_password)
     {
         if (user.has_valid_pwd)
             user.has_valid_pwd = false;
-        send_numeric_reply(user, ERR_PASSWDMISMATCH, NULL);
-        return ;
+        return send_numeric_reply(user, ERR_PASSWDMISMATCH, info);
     }
     user.has_valid_pwd = true;
 }
@@ -99,31 +88,45 @@ the server just sends back ERR_NICKNAMEINUSE reply.
 */
 void App::nick(Client &user, std::vector<std::string> const &params)
 {
+    std::map<std::string, std::string> info;
+    std::string nickname;
+
     if (!user.has_valid_pwd)
-    {
-        send_numeric_reply(user, ERR_PASSWDMISMATCH, NULL);
-        return ;
-    }
+        return send_numeric_reply(user, ERR_PASSWDMISMATCH, info);
     if (params.empty())
-    {
-        send_numeric_reply(user, ERR_NONICKNAMEGIVEN, NULL);
-        return ;
-    }
-    if (!nick_is_valid(params[0]))
-    {
-        send_numeric_reply(user, ERR_ERRONEUSNICKNAME, params[0].c_str());
-        return ;
-    }
-    if (find_client_by_nick(params[0]))
-    {
-        send_numeric_reply(user, ERR_NICKNAMEINUSE, params[0].c_str());
-        return ;
-    }
-    user.nickname = params[0];
+        return send_numeric_reply(user, ERR_NONICKNAMEGIVEN, info);
+    nickname = params[0];
+    info["nick"] = nickname;
+    if (!is_valid_nick(nickname))
+        return send_numeric_reply(user, ERR_ERRONEUSNICKNAME, info);
+    if (find_client_by_nick(nickname))
+        return send_numeric_reply(user, ERR_NICKNAMEINUSE, info);
+    user.nickname = nickname;
     if (!user.is_registered && !user.username.empty())
         user.is_registered = true;
     //std::cout << "New nickname: " << user.nickname 
     //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
+}
+
+
+/*
+Channels names are strings (beginning with a '&' or '#' character) of
+length up to 200 characters.  Apart from the the requirement that the
+first character being either '&' or '#'; the only restriction on a
+channel name is that it may not contain any spaces (' '), a control G
+(^G or ASCII 7), or a comma (',' which is used as a list item
+separator by the protocol).
+*/
+bool App::is_valid_channel_name(std::string const &channel_name) const
+{
+    if (channel_name[0] != '&' && channel_name[0] != '#')
+        return false;
+    for (std::size_t i = 1; i < channel_name.length(); ++i)
+    {
+        if (channel_name[i] == ' ' || channel_name[i] == '\x07' || channel_name[i] == ',')
+            return false;
+    }
+    return true;
 }
 
 /*
@@ -133,7 +136,7 @@ Nickname has a maximum length of nine (9) characters.
 <number>     ::= '0' ... '9'
 <special>    ::= '-' | '[' | ']' | '\' | '`' | '^' | '{' | '}'
 */
-bool App::nick_is_valid(std::string const &nickname) const
+bool App::is_valid_nick(std::string const &nickname) const
 {
     size_t nick_len = nickname.length();
     std::string special("-[]\\`^{}");
@@ -170,29 +173,25 @@ is silently ignored by the server.
 */
 void App::user(Client &user, std::vector<std::string> const &params)
 {
+    std::map<std::string, std::string> info;
+    std::string username;
+
     if (user.is_registered)
-    {
-        send_numeric_reply(user, ERR_ALREADYREGISTRED, NULL);
-        return ;
-    }
+        return send_numeric_reply(user, ERR_ALREADYREGISTRED, info);
     if (!user.has_valid_pwd)
-    {
-        send_numeric_reply(user, ERR_PASSWDMISMATCH, NULL);
-        return ;
-    }
+        return send_numeric_reply(user, ERR_PASSWDMISMATCH, info);
     if (params.empty())
     {
-        send_numeric_reply(user, ERR_NEEDMOREPARAMS, "USER");
-        return ;
+        info["command"] = "USER";
+        return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
     }
-    if (params[0].find(' ') != params[0].npos)
-    {
+    username = params[0];
+    if (username.find(' ') != username.npos)
         return ;
-    }
-    if (params[0].length() > 12)
-        user.username = params[0].substr(0, 12);
+    if (username.length() > 12)
+        user.username = username.substr(0, 12);
     else
-        user.username = params[0];
+        user.username = username;
     if (!user.nickname.empty())
         user.is_registered = true;
     //std::cout << "New username: " << user.username 
@@ -204,70 +203,62 @@ Parameters: <channel> [<key>]
 */
 void App::join(Client &user, std::vector<std::string> const &params)
 {
+    std::map<std::string, std::string> info;
     std::map<std::string, Channel *>::iterator channel_it;
     Channel *channel;
+    std::string channel_name;
 
     if (!user.is_registered)
         return ;
+    info["command"] = "JOIN";
     if (params.empty())
-    {
-        send_numeric_reply(user, ERR_NEEDMOREPARAMS, "JOIN");
-        return ;
-    }
+        return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
+    if (params[0].length() > 200)
+        channel_name = channel_name.substr(0, 200);
+    else
+        channel_name = params[0];
+    info["channel"] = channel_name;
     if (user.num_channels == this->client_channel_limit)
-    {
-        send_numeric_reply(user, ERR_TOOMANYCHANNELS, params[0].c_str());
-        return ;
-    }
-    channel_it = channels.find(params[0]);
+        return send_numeric_reply(user, ERR_TOOMANYCHANNELS, info);
+    channel_it = channels.find(channel_name);
     if (channel_it != channels.end())
     {
         channel = channel_it->second;
         if (channel->has_user(user.nickname))
             return ;
         if (channel->is_invite_only() && !channel->is_invited_user(user.nickname))
-        {
-            send_numeric_reply(user, ERR_INVITEONLYCHAN, channel->name.c_str());
-            return ;
-        }
+            return send_numeric_reply(user, ERR_INVITEONLYCHAN, info);
         if (channel->is_full())
-        {
-            send_numeric_reply(user, ERR_CHANNELISFULL, channel->name.c_str());
-            return ;
-        }
+            return send_numeric_reply(user, ERR_CHANNELISFULL, info);
         if (channel->is_key_protected())
         {
             if (params.size() < 2)
-            {
-                send_numeric_reply(user, ERR_NEEDMOREPARAMS, "JOIN");
-                return ;
-            }
+                return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
             if (!channel->is_matching_key(params[1]))
-            {
-                send_numeric_reply(user, ERR_BADCHANNELKEY, channel->name.c_str());
-                return ;
-            }
+                return send_numeric_reply(user, ERR_BADCHANNELKEY, info);
         }
         channel->add_client(user.nickname);
-        std::cout << user.nickname << " joined " << channel->name << std::endl;
-        // send RPL_TOPIC
-        // send RPL_NAMREPLY
+        info["topic"] = channel->get_topic();
+        info["nicks"] = channel->get_client_nicks_str();
+        send_numeric_reply(user, RPL_TOPIC, info);
+        send_numeric_reply(user, RPL_NAMREPLY, info);
     }
     else
     {
-        // try create a channel
-            // if name is invalid
-                // ERR_BADCHANMASK
-        // add channel to the list of channels
-        // add user to the channel
-        // send RPL_TOPIC
-        // send RPL_NAMREPLY
-        // make the user channel operator
+        if (!is_valid_channel_name(channel_name))
+            return send_numeric_reply(user, ERR_BADCHANMASK, info);
+        channel = new Channel(channel_name);
+        this->channels[channel->name] = channel;
+        channel->add_client(user.nickname);
+        channel->add_operator(user.nickname);
+        info["topic"] = channel->get_topic();
+        info["nicks"] = channel->get_client_nicks_str();
+        send_numeric_reply(user, RPL_TOPIC, info);
+        send_numeric_reply(user, RPL_NAMREPLY, info);
     }
 }
 
-// TODO: make a template
-int split_targets(std::string const &target_str, std::vector<std::string> &targets)
+static int split_targets(std::string const &target_str, std::vector<std::string> &targets)
 {
     std::istringstream ss(target_str);
     std::string target;
@@ -280,7 +271,6 @@ int split_targets(std::string const &target_str, std::vector<std::string> &targe
             if (std::find(targets.begin(), targets.end(), target) != targets.end())
                 return -1;
             targets.push_back(target);
-            std::cout << "new target: " << target << std::endl;
         }
     }
     return 0;
@@ -291,6 +281,7 @@ void App::send_msg_to_targets(Client const &user, std::string const &msg, std::v
     Client *recipient;
     std::map<std::string, Channel *>::const_iterator channel;
     std::string message;
+    std::map<std::string, std::string> info;
 
     for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
     {
@@ -304,9 +295,12 @@ void App::send_msg_to_targets(Client const &user, std::string const &msg, std::v
         {
             channel = channels.find(*i);
             if (channel != channels.end())
-                send_msg_to_targets(user, *i + ' ' + msg, channel->second->get_clients());
+                send_msg_to_targets(user, *i + ' ' + msg, channel->second->get_client_nicks());
             else
-                send_numeric_reply(user, ERR_NOSUCHNICK, (*i).c_str());
+            {
+                info["nick"] = *i;
+                send_numeric_reply(user, ERR_NOSUCHNICK, info);
+            }
         }
     }    
 }
@@ -319,55 +313,61 @@ Message can be sent to the same client that sends it.
 void App::privmsg(Client &user, std::vector<std::string> const &params)
 {
     std::vector<std::string> targets;
+    std::map<std::string, std::string> info;
+    std::string target;
 
     if (!user.is_registered)
         return ;
     if (params.empty())
     {
-        send_numeric_reply(user, ERR_NORECIPIENT, "PRIVMSG");
-        return ;
+        info["command"] = "PRIVMSG";
+        return send_numeric_reply(user, ERR_NORECIPIENT, info);
     }
     if (params.size() < 2)
-    {
-        send_numeric_reply(user, ERR_NOTEXTTOSEND, NULL);
-        return ;
-    }
-    if (params[0].find(',') != params[0].npos)
-    {
-        if (split_targets(params[0], targets) == -1)
-        {
-            send_numeric_reply(user, ERR_TOOMANYTARGETS, params[0].c_str());
-            return ;
-        }
-    }
-    else
+        return send_numeric_reply(user, ERR_NOTEXTTOSEND, info);
+
+    target = params[0];
+    info["target"] = target;
+    if (target.find(',') == target.npos)
         targets.push_back(params[0]);
+    else if (split_targets(target, targets) == -1)
+        return send_numeric_reply(user, ERR_TOOMANYTARGETS, info);
 
     send_msg_to_targets(user, params[1], targets);
 }
 
 void App::kick(Client &user, std::vector<std::string> const &params)
 {
+    (void)user;
+    (void)params;
+
     if (!user.is_registered)
         return ;
 }
 
-/*
-*/
 void App::invite(Client &user, std::vector<std::string> const &params)
 {
+    (void)user;
+    (void)params;
+    
     if (!user.is_registered)
         return ;
 }
 
 void App::topic(Client &user, std::vector<std::string> const &params)
 {
+    (void)user;
+    (void)params;
+    
     if (!user.is_registered)
         return ;
 }
 
 void App::mode(Client &user, std::vector<std::string> const &params)
 {
+    (void)user;
+    (void)params;
+    
     if (!user.is_registered)
         return ;
 }
@@ -382,23 +382,31 @@ Client *App::find_client_by_fd(int fd) const
     return NULL;
 }
 
-// TODO: multiple vars and smarter substitution
-void App::send_numeric_reply(Client const &user, int err, char const *var) const
+void App::send_numeric_reply(Client const &user, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const
 {
-    std::string err_msg;
+    std::string reply_text;
     std::size_t start_pos;
     std::size_t end_pos;
-    std::string reply;
+    std::string key;
+    std::map<std::string, std::string>::const_iterator it;
+    std::string msg;
 
-    err_msg = error_messages.find(err)->second;
-    start_pos = err_msg.find('<');
-    end_pos = err_msg.find('>');
-
-    if (start_pos != std::string::npos && end_pos != std::string::npos && end_pos > start_pos)
-        err_msg.replace(start_pos, end_pos - start_pos + 1, var);
-
-    reply = ':' + this->server_name + ' ' + int_to_string(err) + ' ' + err_msg;
-    send_message(user, reply);
+    reply_text = IRCReply::get_reply_message(code); // reply_texts.find(code)->second;
+    while (true)
+    {
+        start_pos = reply_text.find('<');
+        end_pos = reply_text.find('>');
+        if (start_pos == std::string::npos || end_pos == std::string::npos || end_pos < start_pos)
+            break ;
+        key = reply_text.substr(start_pos + 1, end_pos - start_pos - 1);
+        it = info.find(key);
+        if (it != info.end())
+            reply_text.replace(start_pos, end_pos - start_pos + 1, it->second);
+        else
+            break ;
+    }
+    msg = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + reply_text;
+    send_message(user, msg);
 }
 
 /*
@@ -406,7 +414,7 @@ Runs the command and sends appropriate replies.
 */
 void App::execute_message(Client &user, Message const &msg)
 {
-    std::string reply;
+    std::map<std::string, std::string> info;
     
     for (std::vector<Command>::const_iterator i = commands.begin(); i < commands.end(); i++)
     {
@@ -416,7 +424,8 @@ void App::execute_message(Client &user, Message const &msg)
             return;
         }
     }
-    send_numeric_reply(user, ERR_UNKNOWNCOMMAND, msg.command.c_str());
+    info["command"] = msg.command;
+    send_numeric_reply(user, ERR_UNKNOWNCOMMAND, info);
 }
 
 

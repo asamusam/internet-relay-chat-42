@@ -1,7 +1,13 @@
-#ifndef ERROR_HPP
-#define ERROR_HPP
+#ifndef IRCREPLY_HPP
+#define IRCREPLY_HPP
 
-enum IRCErrors {
+#include <map>
+#include <string>
+
+enum IRCReplyCodeEnum {
+    RPL_TOPIC = 332,
+    RPL_INVITING = 341,
+    RPL_NAMREPLY = 353,
     ERR_NOSUCHNICK = 401,
     ERR_NOSUCHCHANNEL = 403,
     ERR_CANNOTSENDTOCHAN = 404,
@@ -33,4 +39,13 @@ enum IRCErrors {
     ERR_USERSDONTMATCH = 502
 };
 
-#endif // ERROR_HPP
+class IRCReply
+{
+    private:
+        static std::map<IRCReplyCodeEnum, std::string> reply_messages;
+    public:
+        static const std::string& get_reply_message(IRCReplyCodeEnum code);
+};
+
+
+#endif // IRCREPLY_HPP

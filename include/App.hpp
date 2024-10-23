@@ -4,7 +4,7 @@
 #include "Client.hpp"
 #include "Message.hpp"
 #include "Channel.hpp"
-#include "Errors.hpp"
+#include "IRCReply.hpp"
 
 #include <map>
 #include <string>
@@ -26,12 +26,12 @@ class App
         std::string server_name;
         std::string server_password;
         std::vector<Command> commands;
-        std::map<int, std::string> error_messages;
         std::map<int, Client *> clients;
         std::map<std::string, Channel *> channels;
 
     public:
         App(std::string const &name, std::string const &password);
+        ~App();
 
         void add_client(Client *new_client);
         void add_channel(Channel *new_channel);
@@ -50,13 +50,17 @@ class App
         void topic(Client &user, std::vector<std::string> const &params);
         void mode(Client &user, std::vector<std::string> const &params);
 
-        bool nick_is_valid(std::string const &nickname) const;
+        bool is_valid_nick(std::string const &nickname) const;
+        bool is_valid_channel_name(std::string const &channel_name) const;
         Client *find_client_by_nick(std::string const &nick) const;
         Client *find_client_by_fd(int fd) const;
 
-        void send_numeric_reply(Client const &user, int err, char const *var) const;
+        void send_numeric_reply(Client const &user, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const;
         void send_msg_to_targets(Client const &user, std::string const &msg, std::vector<std::string> const &targets) const;
         int send_message(Client const &user, std::string const &message) const;
+
+        void free_clients(void);
+        void free_channels(void);
 };
 
 #endif // APP_HPP

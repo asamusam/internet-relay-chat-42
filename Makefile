@@ -1,10 +1,11 @@
 CXX := c++
 INCLUDE := include
-CXXFLAGS := -std=c++98 -I$(INCLUDE) -g # -Wall -Wextra -Werror
+CXXFLAGS := -Wall -Wextra -Werror -std=c++98 -I$(INCLUDE) -g
 SRC := \
 	src/main.cpp \
 	src/App.cpp \
-	src/Channel.cpp
+	src/Channel.cpp \
+	src/IRCReply.cpp
 OBJ := $(SRC:.cpp=.o)
 NAME := ircserv
 

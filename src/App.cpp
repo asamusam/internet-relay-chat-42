@@ -240,7 +240,8 @@ void App::join(Client &user, std::vector<std::string> const &params)
         channel->add_client(user.nickname);
         info["topic"] = channel->get_topic();
         info["nicks"] = channel->get_client_nicks_str();
-        send_numeric_reply(user, RPL_TOPIC, info);
+        if (!info["topic"].empty())
+            send_numeric_reply(user, RPL_TOPIC, info);
         send_numeric_reply(user, RPL_NAMREPLY, info);
     }
     else
@@ -251,9 +252,7 @@ void App::join(Client &user, std::vector<std::string> const &params)
         this->channels[channel->name] = channel;
         channel->add_client(user.nickname);
         channel->add_operator(user.nickname);
-        info["topic"] = channel->get_topic();
         info["nicks"] = channel->get_client_nicks_str();
-        send_numeric_reply(user, RPL_TOPIC, info);
         send_numeric_reply(user, RPL_NAMREPLY, info);
     }
 }
@@ -377,7 +376,7 @@ void App::invite(Client &user, std::vector<std::string> const &params)
     std::map<std::string, Channel *>::const_iterator channel_it;
     Client *recipient;
     std::string invitation_msg;
-    
+
     if (!user.is_registered)
         return ;
     info["command"] = "INVITE";
@@ -404,22 +403,57 @@ void App::invite(Client &user, std::vector<std::string> const &params)
     send_numeric_reply(user, RPL_INVITING, info);
 }
 
+/*
+Parameters: <channel> [<topic>]
+*/
 void App::topic(Client &user, std::vector<std::string> const &params)
 {
-    (void)user;
-    (void)params;
+    std::map<std::string, std::string> info;
+    std::map<std::string, Channel *>::const_iterator channel_it;
     
     if (!user.is_registered)
         return ;
+    info["command"] = "TOPIC";
+    if (params.empty())
+        return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
+    info["channel"] = params[0];
+        channel_it = channels.find(info["channel"]);
+    if (channel_it == channels.end())
+        return send_numeric_reply(user, ERR_NOSUCHCHANNEL, info);
+    if (!channel_it->second->is_on_channel(user.nickname))
+        return send_numeric_reply(user, ERR_NOTONCHANNEL, info);
+    if (params.size() == 1)
+    {
+        info["topic"] = channel_it->second->get_topic();
+        if (info["topic"].empty())
+            return send_numeric_reply(user, RPL_NOTOPIC, info);
+        else
+            return send_numeric_reply(user, RPL_TOPIC, info);
+    }
+    if (channel_it->second->is_in_topic_protected_mode() && !channel_it->second->is_channel_operator(user.nickname))
+        return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
+    info["topic"] = params[1];
+    channel_it->second->set_topic(info["topic"]);
+    send_numeric_reply(*channel_it->second, RPL_TOPIC, info);
 }
 
 void App::mode(Client &user, std::vector<std::string> const &params)
 {
-    (void)user;
-    (void)params;
+    std::map<std::string, std::string> info;
+    std::map<std::string, Channel *>::const_iterator channel_it;
     
     if (!user.is_registered)
         return ;
+    info["command"] = "MODE";
+    if (params.empty())
+        return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
+    info["channel"] = params[0];
+    channel_it = channels.find(params[0]);
+    if (channel_it == channels.end())
+        return send_numeric_reply(user, ERR_NOSUCHCHANNEL, info);
+    // if no modestring given
+        // send RPL RPL_CHANNELMODEIS
+    // ...
 }
 
 Client *App::find_client_by_fd(int fd) const
@@ -432,31 +466,56 @@ Client *App::find_client_by_fd(int fd) const
     return NULL;
 }
 
-void App::send_numeric_reply(Client const &user, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const
+void App::fill_placeholders(std::string &str, std::map<std::string, std::string> const &info) const
 {
-    std::string reply_text;
+    std::map<std::string, std::string>::const_iterator it;
     std::size_t start_pos;
     std::size_t end_pos;
     std::string key;
-    std::map<std::string, std::string>::const_iterator it;
-    std::string msg;
 
-    reply_text = IRCReply::get_reply_message(code); // reply_texts.find(code)->second;
     while (true)
     {
-        start_pos = reply_text.find('<');
-        end_pos = reply_text.find('>');
+        start_pos = str.find('<');
+        end_pos = str.find('>');
         if (start_pos == std::string::npos || end_pos == std::string::npos || end_pos < start_pos)
             break ;
-        key = reply_text.substr(start_pos + 1, end_pos - start_pos - 1);
+        key = str.substr(start_pos + 1, end_pos - start_pos - 1);
         it = info.find(key);
         if (it != info.end())
-            reply_text.replace(start_pos, end_pos - start_pos + 1, it->second);
+            str.replace(start_pos, end_pos - start_pos + 1, it->second);
         else
             break ;
     }
+}
+
+void App::send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const
+{
+    std::string reply_text;
+    std::string msg;
+
+    reply_text = IRCReply::get_reply_message(code);
+    fill_placeholders(reply_text, info);
     msg = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + reply_text;
-    send_message(user, msg);
+    send_message(client, msg);
+}
+
+void App::send_numeric_reply(Channel const &channel, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const
+{
+    std::string reply_text;
+    std::string message;
+    std::vector<std::string> clients;
+    Client *client;
+
+    reply_text = IRCReply::get_reply_message(code);
+    fill_placeholders(reply_text, info);
+    message = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + reply_text;
+    clients = channel.get_client_nicks();
+    for (std::vector<std::string>::const_iterator i = clients.begin(); i < clients.end(); i++)
+    {
+        client = find_client_by_nick(*i);
+        if (client && client->is_registered)
+            send_message(*client, message);
+    }
 }
 
 /*
@@ -479,10 +538,9 @@ void App::execute_message(Client &user, Message const &msg)
 }
 
 
-int App::send_message(Client const &client, std::string const &message) const
+void App::send_message(Client const &client, std::string const &message) const
 {
     std::cout << "Message sent to " << (client.nickname.empty() ? "client" : client.nickname) << '\n' << message << std::endl;
-    return 0;
 }
 
 static void skip_space(std::istringstream &msg_stream)

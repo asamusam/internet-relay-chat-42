@@ -27,7 +27,7 @@ int Channel::get_client_count(void) const
 
 void Channel::add_client(std::string const &nick)
 {
-        clients.push_back(nick);
+    clients.push_back(nick);
 }
 
 void Channel::remove_client(std::string const &nick)
@@ -60,6 +60,13 @@ std::string Channel::get_client_nicks_str(void) const
 bool Channel::is_invite_only(void) const
 {
     if (mode.find('i') == std::string::npos)
+        return false;
+    return true;
+}
+
+bool Channel::is_in_topic_protected_mode(void) const
+{
+    if (mode.find('t') == std::string::npos)
         return false;
     return true;
 }
@@ -107,7 +114,7 @@ bool Channel::is_full(void) const
 {
     if (mode.find('l') == std::string::npos)
         return false;
-        return clients.size() == user_limit;
+    return clients.size() == user_limit;
 }
 
 void Channel::set_user_limit(int limit)

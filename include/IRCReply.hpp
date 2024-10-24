@@ -5,6 +5,8 @@
 #include <string>
 
 enum IRCReplyCodeEnum {
+    RPL_CHANNELMODEIS = 324,
+    RPL_NOTOPIC = 331,
     RPL_TOPIC = 332,
     RPL_INVITING = 341,
     RPL_NAMREPLY = 353,

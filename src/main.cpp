@@ -39,8 +39,9 @@ int main(int argc, char **argv)
 
     app.add_client(first_client);
     app.add_client(second_client);
-    //channel->add_client(first_client->nickname);
-    channel->add_client(second_client->nickname);
+    channel->add_client(first_client->nickname);
+    //channel->add_operator(first_client->nickname);
+    // channel->add_client(second_client->nickname);
     channel->set_topic("funfunfun");
     app.add_channel(channel);
 

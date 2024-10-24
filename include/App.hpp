@@ -39,7 +39,6 @@ class App
         int parse_message(Client &user, std::string const &msg_string, Message &msg) const;
         void execute_message(Client &user, Message const &msg);
         
-
         void pass(Client &user, std::vector<std::string> const &params);
         void nick(Client &user, std::vector<std::string> const &params);
         void user(Client &user, std::vector<std::string> const &params);
@@ -52,15 +51,21 @@ class App
 
         bool is_valid_nick(std::string const &nickname) const;
         bool is_valid_channel_name(std::string const &channel_name) const;
+
         Client *find_client_by_nick(std::string const &nick) const;
         Client *find_client_by_fd(int fd) const;
 
-        void send_numeric_reply(Client const &user, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const;
+        void send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const;
+        void send_numeric_reply(Channel const &channel, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const;
+        void fill_placeholders(std::string &str, std::map<std::string, std::string> const &info) const;
+
+        void send_message(Client const &user, std::string const &msg) const;
         void send_msg_to_targets(Client const &user, std::string const &msg, std::vector<std::string> const &targets) const;
-        int send_message(Client const &user, std::string const &message) const;
 
         void free_clients(void);
         void free_channels(void);
+
+
 };
 
 #endif // APP_HPP

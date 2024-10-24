@@ -30,7 +30,9 @@ std::pair<IRCReplyCodeEnum, std::string> reply_data[] = {
     std::make_pair(ERR_USERSDONTMATCH,   ":Cannot change mode for other users"),
     std::make_pair(RPL_TOPIC,            "<channel> : <topic>"),
     std::make_pair(RPL_NAMREPLY,         "<channel> : <nicks>"),
-    std::make_pair(RPL_INVITING,         "<channel> <nick>")
+    std::make_pair(RPL_INVITING,         "<channel> <nick>"),
+    std::make_pair(RPL_CHANNELMODEIS,    "<channel> <mode> <mode params>"),
+    std::make_pair(RPL_NOTOPIC,          "<channel> :No topic is set")
 };
 
 std::map<IRCReplyCodeEnum, std::string> IRCReply::reply_messages(reply_data, reply_data + sizeof reply_data / sizeof reply_data[0]);

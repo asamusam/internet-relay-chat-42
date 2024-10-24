@@ -23,9 +23,9 @@ class Channel
         Channel(std::string const &name);
 
         std::string get_topic(void) const;
-        int get_client_count(void) const;
-
         void set_topic(std::string const &topic);
+
+        int get_client_count(void) const;
         void set_user_limit(int limit);
 
         void add_client(std::string const &nick);
@@ -37,6 +37,7 @@ class Channel
         bool is_invite_only(void) const;
         bool is_full(void) const;
         bool is_key_protected(void) const;
+        bool is_in_topic_protected_mode(void) const;
 
         bool is_on_channel(std::string const &nick) const;
         bool is_invited(std::string const &nick) const;

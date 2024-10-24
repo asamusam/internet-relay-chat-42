@@ -238,24 +238,22 @@ void App::join(Client &user, std::vector<std::string> const &params)
             if (!channel->is_matching_key(params[1]))
                 return send_numeric_reply(user, ERR_BADCHANNELKEY, info);
         }
-        channel->add_client(user.nickname);
-        info["topic"] = channel->get_topic();
-        info["nicks"] = channel->get_client_nicks_str();
-        if (!info["topic"].empty())
-            send_numeric_reply(user, RPL_TOPIC, info);
-        send_numeric_reply(user, RPL_NAMREPLY, info);
     }
     else
     {
         if (!is_valid_channel_name(channel_name))
             return send_numeric_reply(user, ERR_BADCHANMASK, info);
         channel = new Channel(channel_name);
-        this->channels[channel->name] = channel;
-        channel->add_client(user.nickname);
         channel->add_operator(user.nickname);
-        info["nicks"] = channel->get_client_nicks_str();
-        send_numeric_reply(user, RPL_NAMREPLY, info);
+        this->channels[channel->name] = channel;
     }
+    channel->add_client(user.nickname);
+    send_message_to_targets(user, info["command"], info["channel"], channel->get_client_nicks());
+    info["topic"] = channel->get_topic();
+    info["nicks"] = channel->get_client_nicks_str();
+    if (!info["topic"].empty())
+        send_numeric_reply(user, RPL_TOPIC, info);
+    send_numeric_reply(user, RPL_NAMREPLY, info);
 }
 
 static int split_targets(std::string const &target_str, std::vector<std::string> &targets)
@@ -355,6 +353,7 @@ void App::kick(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     if (!channel_it->second->is_on_channel(info["user"]))
         return send_numeric_reply(user, ERR_USERNOTINCHANNEL, info);
+    send_message_to_targets(user, info["command"], info["channel"] + ' ' + info["user"], channel_it->second->get_client_nicks());
     channel_it->second->remove_client(info["user"]);
     if (channel_it->second->get_client_count() == 0)
     {

@@ -13,7 +13,7 @@ class Channel
         std::vector<std::string> clients;
         std::vector<std::string> operators;
         std::vector<std::string> invitations;
-        std::string mode;
+        std::string modes;
         unsigned int user_limit;
 
     public:
@@ -22,7 +22,7 @@ class Channel
     public:
         Channel(std::string const &name);
 
-        std::string get_topic(void) const;
+        std::string const &get_topic(void) const;
         void set_topic(std::string const &topic);
 
         int get_client_count(void) const;
@@ -52,6 +52,11 @@ class Channel
 
         void add_mode(char mode);
         void remove_mode(char mode);
+        std::string const &get_modes(void) const;
+
+        void set_key(std::string const &key);
+        std::string const &get_key(void) const;
+
 };
 
 #endif // CHANNEL_HPP

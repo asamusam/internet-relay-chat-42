@@ -8,6 +8,7 @@ Channel::Channel(std::string const &name)
 {
     this->name = name;
     user_limit = std::numeric_limits<unsigned int>::max();
+    modes = "+";
 }
 
 void Channel::set_topic(std::string const &topic)
@@ -15,7 +16,7 @@ void Channel::set_topic(std::string const &topic)
     this->topic = topic;
 }
 
-std::string Channel::get_topic(void) const
+std::string const &Channel::get_topic(void) const
 {
     return topic;
 }
@@ -59,14 +60,14 @@ std::string Channel::get_client_nicks_str(void) const
 
 bool Channel::is_invite_only(void) const
 {
-    if (mode.find('i') == std::string::npos)
+    if (modes.find('i') == std::string::npos)
         return false;
     return true;
 }
 
 bool Channel::is_in_topic_protected_mode(void) const
 {
-    if (mode.find('t') == std::string::npos)
+    if (modes.find('t') == std::string::npos)
         return false;
     return true;
 }
@@ -112,7 +113,7 @@ void Channel::remove_operator(std::string const &nick)
 
 bool Channel::is_full(void) const
 {
-    if (mode.find('l') == std::string::npos)
+    if (modes.find('l') == std::string::npos)
         return false;
     return clients.size() == user_limit;
 }
@@ -124,7 +125,7 @@ void Channel::set_user_limit(int limit)
 
 bool Channel::is_key_protected(void) const
 {
-    if (mode.find('k') == std::string::npos)
+    if (modes.find('k') == std::string::npos)
         return false;
     return true;
 }
@@ -153,16 +154,31 @@ bool Channel::is_channel_operator(std::string const &nick) const
 
 void Channel::add_mode(char new_mode)
 {
-    if (mode.find(new_mode) == std::string::npos)
-        mode.insert(mode.end(), new_mode);
+    if (modes.find(new_mode) == std::string::npos)
+        modes.insert(modes.end(), new_mode);
 }
 
 void Channel::remove_mode(char new_mode)
 {
     size_t index;
 
-    index = mode.find(new_mode);
+    index = modes.find(new_mode);
     if (index == std::string::npos)
         return;
-    mode.erase(index);
+    modes.erase(index);
+}
+
+std::string const &Channel::get_modes(void) const
+{
+    return modes;
+}
+
+void Channel::set_key(std::string const &key)
+{
+    this->key = key;
+}
+
+std::string const &Channel::get_key(void) const
+{
+    return key;
 }

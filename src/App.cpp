@@ -276,26 +276,24 @@ static int split_targets(std::string const &target_str, std::vector<std::string>
     return 0;
 }
 
-void App::send_msg_to_targets(Client const &user, std::string const &msg, std::vector<std::string> const &targets) const
+void App::send_message_to_targets(Client const &user, std::string const &cmd, std::string const &msg, std::vector<std::string> const &targets) const
 {
     Client *recipient;
     std::map<std::string, Channel *>::const_iterator channel;
     std::string message;
     std::map<std::string, std::string> info;
 
+    message = ':' + user.nickname + ' ' + cmd + ' ' + msg;
     for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
     {
         recipient = find_client_by_nick(*i);
         if (recipient && recipient->is_registered)
-        {
-            message = ':' + user.nickname + " PRIVMSG " + msg;
             send_message(*recipient, message);
-        }
         else
         {
             channel = channels.find(*i);
             if (channel != channels.end())
-                send_msg_to_targets(user, *i + ' ' + msg, channel->second->get_client_nicks());
+                send_message_to_targets(user, cmd, *i + ' ' + msg, channel->second->get_client_nicks());
             else
             {
                 info["nick"] = *i;
@@ -318,14 +316,11 @@ void App::privmsg(Client &user, std::vector<std::string> const &params)
 
     if (!user.is_registered)
         return ;
+    info["command"] = "PRIVMSG";
     if (params.empty())
-    {
-        info["command"] = "PRIVMSG";
         return send_numeric_reply(user, ERR_NORECIPIENT, info);
-    }
     if (params.size() < 2)
         return send_numeric_reply(user, ERR_NOTEXTTOSEND, info);
-
     target = params[0];
     info["target"] = target;
     if (target.find(',') == target.npos)
@@ -333,7 +328,7 @@ void App::privmsg(Client &user, std::vector<std::string> const &params)
     else if (split_targets(target, targets) == -1)
         return send_numeric_reply(user, ERR_TOOMANYTARGETS, info);
 
-    send_msg_to_targets(user, params[1], targets);
+    send_message_to_targets(user, info["command"], params[1], targets);
 }
 
 /*
@@ -435,7 +430,7 @@ void App::topic(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     info["topic"] = params[1];
     channel_it->second->set_topic(info["topic"]);
-    send_numeric_reply(*channel_it->second, RPL_TOPIC, info);
+    send_message_to_targets(user, info["command"], info["topic"], channel_it->second->get_client_nicks());
 }
 
 void App::mode(Client &user, std::vector<std::string> const &params)

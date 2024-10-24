@@ -6,18 +6,18 @@
   |_| \___/|____/ \___/.md
 ```
 - [ ] connection:
-  - [ ] Accept client connections using TCP/IP
-  - [ ] Store information for each connected client
+  - [x] Accept client connections using TCP/IP
+  - [x] Store information for each connected client
   - [ ] Handle client disconnections and timeouts
 - [ ] authentication
 - [ ] receive messages:
   - [ ] aggregate received packages
-  - [ ] parse message
+  - [x] parse message
   - [ ] commands:
     - [ ] client (user):
-      - [ ] receive normal one-to-many to-a-group message
-      - [ ] `NICK` set (unique) nickname
-      - [ ] `USER` set username
+      - [x] receive normal one-to-many to-a-group message
+      - [x] `NICK` set (unique) nickname
+      - [x] `USER` set username
       - [ ] `JOIN` join channel
       - [ ] `PART` leave channel
       - [ ] `PRIVMSG` receive private message
@@ -32,10 +32,10 @@
         - [ ] `o` give/take channel opperator priviledge
         - [ ] `l` set/remove user limit to channel
 - [ ] send messages:
-  - [ ] create message
+  - [x] create message
   - [ ] forward one-to-many to-a-group messages
   - [ ] forward private messages
-  - [ ] send replies
+  - [x] send replies
 - [ ] error checking:
   - [ ] partial data
   - [ ] low bandwidth

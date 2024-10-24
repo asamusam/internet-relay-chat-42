@@ -103,6 +103,7 @@ void handle_msg(App &app, Client *client)
 		if (-1 ==  bytes_read)
 			throw (SCEM_RECV);
 		msg.append(buff);
+		std::memset(buff, 0, sizeof buff);
 		crlf_indx = msg.find(CRLF);
 
 		if ((crlf_indx == msg.npos && msg.size() >= MAX_MSG_SIZE) || crlf_indx > MAX_MSG_SIZE - 2)

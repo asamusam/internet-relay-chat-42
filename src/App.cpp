@@ -238,24 +238,22 @@ void App::join(Client &user, std::vector<std::string> const &params)
             if (!channel->is_matching_key(params[1]))
                 return send_numeric_reply(user, ERR_BADCHANNELKEY, info);
         }
-        channel->add_client(user.nickname);
-        info["topic"] = channel->get_topic();
-        info["nicks"] = channel->get_client_nicks_str();
-        if (!info["topic"].empty())
-            send_numeric_reply(user, RPL_TOPIC, info);
-        send_numeric_reply(user, RPL_NAMREPLY, info);
     }
     else
     {
         if (!is_valid_channel_name(channel_name))
             return send_numeric_reply(user, ERR_BADCHANMASK, info);
         channel = new Channel(channel_name);
-        this->channels[channel->name] = channel;
-        channel->add_client(user.nickname);
         channel->add_operator(user.nickname);
-        info["nicks"] = channel->get_client_nicks_str();
-        send_numeric_reply(user, RPL_NAMREPLY, info);
+        this->channels[channel->name] = channel;
     }
+    channel->add_client(user.nickname);
+    send_message_to_targets(user, info["command"], info["channel"], channel->get_client_nicks());
+    info["topic"] = channel->get_topic();
+    info["nicks"] = channel->get_client_nicks_str();
+    if (!info["topic"].empty())
+        send_numeric_reply(user, RPL_TOPIC, info);
+    send_numeric_reply(user, RPL_NAMREPLY, info);
 }
 
 static int split_targets(std::string const &target_str, std::vector<std::string> &targets)
@@ -276,26 +274,24 @@ static int split_targets(std::string const &target_str, std::vector<std::string>
     return 0;
 }
 
-void App::send_msg_to_targets(Client const &user, std::string const &msg, std::vector<std::string> const &targets) const
+void App::send_message_to_targets(Client const &user, std::string const &cmd, std::string const &msg, std::vector<std::string> const &targets) const
 {
     Client *recipient;
     std::map<std::string, Channel *>::const_iterator channel;
     std::string message;
     std::map<std::string, std::string> info;
 
+    message = ':' + user.nickname + ' ' + cmd + ' ' + msg;
     for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
     {
         recipient = find_client_by_nick(*i);
         if (recipient && recipient->is_registered)
-        {
-            message = ':' + user.nickname + " PRIVMSG " + msg;
             send_message(*recipient, message);
-        }
         else
         {
             channel = channels.find(*i);
             if (channel != channels.end())
-                send_msg_to_targets(user, *i + ' ' + msg, channel->second->get_client_nicks());
+                send_message_to_targets(user, cmd, *i + ' ' + msg, channel->second->get_client_nicks());
             else
             {
                 info["nick"] = *i;
@@ -318,14 +314,11 @@ void App::privmsg(Client &user, std::vector<std::string> const &params)
 
     if (!user.is_registered)
         return ;
+    info["command"] = "PRIVMSG";
     if (params.empty())
-    {
-        info["command"] = "PRIVMSG";
         return send_numeric_reply(user, ERR_NORECIPIENT, info);
-    }
     if (params.size() < 2)
         return send_numeric_reply(user, ERR_NOTEXTTOSEND, info);
-
     target = params[0];
     info["target"] = target;
     if (target.find(',') == target.npos)
@@ -333,7 +326,7 @@ void App::privmsg(Client &user, std::vector<std::string> const &params)
     else if (split_targets(target, targets) == -1)
         return send_numeric_reply(user, ERR_TOOMANYTARGETS, info);
 
-    send_msg_to_targets(user, params[1], targets);
+    send_message_to_targets(user, info["command"], params[1], targets);
 }
 
 /*
@@ -360,6 +353,7 @@ void App::kick(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     if (!channel_it->second->is_on_channel(info["user"]))
         return send_numeric_reply(user, ERR_USERNOTINCHANNEL, info);
+    send_message_to_targets(user, info["command"], info["channel"] + ' ' + info["user"], channel_it->second->get_client_nicks());
     channel_it->second->remove_client(info["user"]);
     if (channel_it->second->get_client_count() == 0)
     {
@@ -434,8 +428,11 @@ void App::topic(Client &user, std::vector<std::string> const &params)
     if (channel_it->second->is_in_topic_protected_mode() && !channel_it->second->is_channel_operator(user.nickname))
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     info["topic"] = params[1];
-    channel_it->second->set_topic(info["topic"]);
-    send_numeric_reply(*channel_it->second, RPL_TOPIC, info);
+    if (info["topic"] == ":")
+        channel_it->second->set_topic("");
+    else
+        channel_it->second->set_topic(info["topic"]);
+    send_message_to_targets(user, info["command"], info["channel"] + ' ' + info["topic"], channel_it->second->get_client_nicks());
 }
 
 void App::mode(Client &user, std::vector<std::string> const &params)
@@ -498,25 +495,6 @@ void App::send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::m
     fill_placeholders(reply_text, info);
     msg = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + reply_text;
     send_message(client, msg);
-}
-
-void App::send_numeric_reply(Channel const &channel, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const
-{
-    std::string reply_text;
-    std::string message;
-    std::vector<std::string> clients;
-    Client *client;
-
-    reply_text = IRCReply::get_reply_message(code);
-    fill_placeholders(reply_text, info);
-    message = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + reply_text;
-    clients = channel.get_client_nicks();
-    for (std::vector<std::string>::const_iterator i = clients.begin(); i < clients.end(); i++)
-    {
-        client = find_client_by_nick(*i);
-        if (client && client->is_registered)
-            send_message(*client, message);
-    }
 }
 
 /*

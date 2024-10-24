@@ -45,6 +45,8 @@ void conn_loop(App &app, int listen_sock_fd)
 		}
 	}
 
+	/* TODO: this funcion doesn't called when receiving Ctrl-C signal,
+	 * which is the only way of exiting at the moment */
 	close(listen_sock_fd);
 }
 

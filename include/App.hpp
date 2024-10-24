@@ -56,7 +56,6 @@ class App
         Client *find_client_by_fd(int fd) const;
 
         void send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const;
-        void send_numeric_reply(Channel const &channel, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const;
         void fill_placeholders(std::string &str, std::map<std::string, std::string> const &info) const;
 
         void send_message(Client const &user, std::string const &msg) const;

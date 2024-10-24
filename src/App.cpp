@@ -495,25 +495,6 @@ void App::send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::m
     send_message(client, msg);
 }
 
-void App::send_numeric_reply(Channel const &channel, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const
-{
-    std::string reply_text;
-    std::string message;
-    std::vector<std::string> clients;
-    Client *client;
-
-    reply_text = IRCReply::get_reply_message(code);
-    fill_placeholders(reply_text, info);
-    message = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + reply_text;
-    clients = channel.get_client_nicks();
-    for (std::vector<std::string>::const_iterator i = clients.begin(); i < clients.end(); i++)
-    {
-        client = find_client_by_nick(*i);
-        if (client && client->is_registered)
-            send_message(*client, message);
-    }
-}
-
 /*
 Runs the command and sends appropriate replies.
 */

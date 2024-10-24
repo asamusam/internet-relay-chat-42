@@ -109,7 +109,8 @@ void handle_msg(App &app, Client *client)
 		msg.append(buff);
 		crlf_indx = msg.find(CRLF);
 
-		if ((crlf_indx == msg.npos && msg.size() >= MAX_MSG_SIZE) || (crlf_indx != msg.npos && crlf_indx > MAX_MSG_SIZE - 2))
+		if ((crlf_indx == msg.npos && msg.size() >= MAX_MSG_SIZE)
+				|| (crlf_indx != msg.npos && crlf_indx > MAX_MSG_SIZE - 2))
 		{
 			msg.erase(MAX_MSG_SIZE);
 			if (-1 == app.parse_message(*client, msg, message))

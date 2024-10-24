@@ -1,11 +1,10 @@
 1. Client connects to the server using correct port
 2. Server instantiates the client structure/object with default values (all empty/false)
 3. Any message received by the server from the client goes to parseMessage() with the following parameters:
-    - app structure (server database)
     - client instance
     - message string
-    - buffer to store the resulting message
+    - buffer to store the resulting reply string
 4. parseMessage() returns:
-    - if -1, do nothing
-    - if 0, the message is fully valid, execute it
-    - if >0, send the message stored in the buffer back to the client
+    - if -1, something went wrong, but we are ignoring it, do nothing
+    - if 0, success, the message is valid, command is executed, do nothing
+    - if >0, send the message string stored in the buffer back to the client

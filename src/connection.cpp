@@ -80,7 +80,9 @@ void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 	if (-1 == epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn_sock_fd, &ev))
 		throw (SCEM_EPOLL_CTL);
 
+	static int uuid = 1;
 	Client *client = new Client;
+	client->uuid = uuid++;
 	client->fd = conn_sock_fd;
 	client->is_registered = false;
 	client->has_valid_pwd = false;

@@ -91,7 +91,6 @@ void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 void handle_msg(App &app, Client *client)
 {
 	char buff[MAX_MSG_SIZE];
-	std::memset(buff, 0, sizeof buff);
 	std::string &msg = client->msg_buff;
 	ssize_t bytes_read;
 	size_t crlf_indx;
@@ -99,14 +98,16 @@ void handle_msg(App &app, Client *client)
 
 	do
 	{
+		std::memset(buff, 0, sizeof buff);
 		bytes_read = recv(client->fd, buff, sizeof buff, 0);
 		if (-1 ==  bytes_read)
 			throw (SCEM_RECV);
+		if (0 == bytes_read)
+			return ;
 		msg.append(buff);
-		std::memset(buff, 0, sizeof buff);
 		crlf_indx = msg.find(CRLF);
 
-		if ((crlf_indx == msg.npos && msg.size() >= MAX_MSG_SIZE) || crlf_indx > MAX_MSG_SIZE - 2)
+		if ((crlf_indx == msg.npos && msg.size() >= MAX_MSG_SIZE) || (crlf_indx != msg.npos && crlf_indx > MAX_MSG_SIZE - 2))
 		{
 			msg.erase(MAX_MSG_SIZE);
 			if (-1 == app.parse_message(*client, msg, message))

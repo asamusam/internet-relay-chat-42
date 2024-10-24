@@ -421,7 +421,7 @@ void App::topic(Client &user, std::vector<std::string> const &params)
     if (params.size() == 1)
     {
         info["topic"] = channel_it->second->get_topic();
-        if (info["topic"].empty())
+        if (info["topic"].empty() || info["topic"] == ":")
             return send_numeric_reply(user, RPL_NOTOPIC, info);
         else
             return send_numeric_reply(user, RPL_TOPIC, info);
@@ -430,7 +430,7 @@ void App::topic(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     info["topic"] = params[1];
     channel_it->second->set_topic(info["topic"]);
-    send_message_to_targets(user, info["command"], info["topic"], channel_it->second->get_client_nicks());
+    send_message_to_targets(user, info["command"], info["channel"] + ' ' + info["topic"], channel_it->second->get_client_nicks());
 }
 
 void App::mode(Client &user, std::vector<std::string> const &params)

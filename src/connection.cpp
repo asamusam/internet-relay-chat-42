@@ -109,8 +109,8 @@ void handle_msg(App &app, Client *client)
 		if ((crlf_indx == msg.npos && msg.size() >= MAX_MSG_SIZE) || crlf_indx > MAX_MSG_SIZE - 2)
 		{
 			msg.erase(MAX_MSG_SIZE);
-			if (-1 == app.parse_message(*client, client->msg_buff, message))
-				std::cerr << "Cannot parse message: " << client->msg_buff << "\n";
+			if (-1 == app.parse_message(*client, msg, message))
+				std::cerr << "Cannot parse message: " << msg << "\n";
 			else
 				app.execute_message(*client, message);
 			msg.clear();

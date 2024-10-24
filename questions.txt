@@ -1,0 +1,16 @@
+Questions and things to discuss
+
+1. Consider storing clients in map with nicknames as keys instead of ids, 
+   because we will often need to find a client by nickname: privmsg, invite, registration.
+2. PASS command. Consider closing the connection when the client sends additional PASS command
+   with wrong password after sending NICK or USER commands, before the registration is complete. 
+   Now we just send ERR_PASSWDMISMATCH.
+3. USER command doesn’t have a specified error for cases when the provided username is invalid (contains spaces).
+   Current behavior is to ignore such messages.
+4. Future security enhancements: limit the number of attempts to send PASS command
+   and store the password in the configuration file.
+
+
+What if the channel is invite only and key enabled at the same time?
+Can you invite users to a channel that is already full?
+Can the invitation be revoked or does the user just hangs in invited indefinitely?

@@ -6,6 +6,7 @@ SRC := \
 	src/App.cpp \
 	src/Channel.cpp \
 	src/InternalError.cpp \
+	src/IRCReply.cpp \
 	src/SystemCallErrorMessage.cpp \
 	src/connection.cpp \
 	src/main.cpp \

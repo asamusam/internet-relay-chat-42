@@ -116,7 +116,11 @@ void App::nick(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_NICKNAMEINUSE, info);
     user.nickname = nickname;
     if (!user.is_registered && !user.username.empty())
+    {
         user.is_registered = true;
+        info["network"] = "42 London";
+        send_numeric_reply(user, RPL_WELCOME, info);
+    }
     //std::cout << "New nickname: " << user.nickname 
     //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
 }
@@ -206,7 +210,12 @@ void App::user(Client &user, std::vector<std::string> const &params)
     else
         user.username = username;
     if (!user.nickname.empty())
+    {
         user.is_registered = true;
+        info["nick"] = user.nickname;
+        info["network"] = "42 London";
+        send_numeric_reply(user, RPL_WELCOME, info);
+    }
     //std::cout << "New username: " << user.username 
     //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
 }

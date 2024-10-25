@@ -30,9 +30,9 @@ void conn_loop(App &app, int listen_sock_fd)
 			{
 				if (fd == listen_sock_fd)
 					accept_in_conns(app, epoll_fd, listen_sock_fd);
-				else if (events[i].events & EPOLLHUP)
+				else if (events[i].events & (EPOLLHUP | EPOLLRDHUP))
 					close_conn(app, fd);
-				else
+				else if (events[i].events & EPOLLIN)
 					handle_msg(app, app.find_client_by_fd(fd));
 			}
 			catch (scem_function sf)

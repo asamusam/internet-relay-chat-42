@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#define CRLF "\r\n"
+
 class App
 {
     public:

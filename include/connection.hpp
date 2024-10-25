@@ -6,7 +6,6 @@
 
 #define NO_TIMEOUT -1
 #define MAX_MSG_SIZE 512
-#define CRLF "\r\n"
 
 class ConnConst
 {

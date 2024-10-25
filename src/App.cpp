@@ -540,8 +540,11 @@ void App::execute_message(Client &user, Message const &msg)
 
 void App::send_message(Client const &client, std::string const &message) const
 {
+    std::string crlf_msg;
+
+    crlf_msg = message + CRLF;
 	std::cout << "Send msg to uuid:" << client.uuid << " ->" << message << "\n";
-	send(client.fd, message.c_str(), message.size(), 0);
+	send(client.fd, crlf_msg.c_str(), crlf_msg.size(), 0);
 }
 
 static void skip_space(std::istringstream &msg_stream)

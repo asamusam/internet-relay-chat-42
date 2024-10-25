@@ -553,10 +553,10 @@ int App::parse_message(Client &user, std::string const &msg_string, Message &msg
     while (!msg_stream.eof())
     {
         if (msg_stream.peek() == ':')
-		{
-			msg_stream.ignore(1);
+        {
+            msg_stream.ignore(1);
             std::getline(msg_stream, param);
-		}
+        }
         else
             std::getline(msg_stream, param, ' ');
         if (!param.empty())

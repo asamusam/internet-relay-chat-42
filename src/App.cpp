@@ -519,6 +519,7 @@ void App::execute_message(Client &user, Message const &msg)
 
 void App::send_message(Client const &client, std::string const &message) const
 {
+	std::cout << "Send msg to uuid:" << client.uuid << " ->" << message << "\n";
 	send(client.fd, message.c_str(), message.size(), 0);
 }
 
@@ -552,7 +553,10 @@ int App::parse_message(Client &user, std::string const &msg_string, Message &msg
     while (!msg_stream.eof())
     {
         if (msg_stream.peek() == ':')
+		{
+			msg_stream.ignore(1);
             std::getline(msg_stream, param);
+		}
         else
             std::getline(msg_stream, param, ' ');
         if (!param.empty())

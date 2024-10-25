@@ -88,6 +88,9 @@ void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 	client->has_valid_pwd = false;
 	client->num_channels = 0;
 	app.add_client(client);
+
+	std::cout << "Accepted new connection and created new client with uuid:" << client->uuid << " and fd:"
+		<< client->fd << "\n";
 }
 
 void handle_msg(App &app, Client *client)
@@ -113,10 +116,14 @@ void handle_msg(App &app, Client *client)
 				|| (crlf_indx != msg.npos && crlf_indx > MAX_MSG_SIZE - 2))
 		{
 			msg.erase(MAX_MSG_SIZE);
+			std::cout << "Recv msg from uuid:" << client->uuid << " ->" << msg << "\n";
 			if (-1 == app.parse_message(*client, msg, message))
-				std::cerr << "Cannot parse message: " << msg << "\n";
+				std::cerr << "Cannot parse message from uuid:" << client->uuid << " ->" << msg << "\n";
 			else
+			{
+				std::cout << "Exec msg from uuid:" << client->uuid << " ->" << msg << "\n";
 				app.execute_message(*client, message);
+			}
 			msg.clear();
 			continue ;
 		}
@@ -124,11 +131,15 @@ void handle_msg(App &app, Client *client)
 		while (not msg.empty() && crlf_indx != msg.npos)
 		{
 			std::string msg_substr = msg.substr(0, crlf_indx);
+			std::cout << "Recv msg from uuid:" << client->uuid << " ->" << msg_substr << "\n";
 
 			if (-1 == app.parse_message(*client, msg_substr, message))
-				std::cerr << "Cannot parse message: " << msg_substr << "\n";
+				std::cerr << "Cannot parse message from uuid:" << client->uuid << " ->" << msg_substr << "\n";
 			else
+			{
+				std::cout << "Exec msg from uuid:" << client->uuid << " ->" << msg_substr << "\n";
 				app.execute_message(*client, message);
+			}
 			msg.erase(0, crlf_indx + 2);
 			crlf_indx = msg.find(CRLF);
 		}

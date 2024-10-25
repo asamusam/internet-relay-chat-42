@@ -154,5 +154,5 @@ void close_conn(App &app, int fd)
 	handle_msg(app, client);
 	close(fd);
 	std::cout << "Peer with uuid:" << client->uuid << " closed the connection.\n";
-	/* app.remove_client(client->uuid); */
+	app.remove_client(client->uuid);
 }

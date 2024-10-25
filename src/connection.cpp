@@ -145,7 +145,7 @@ void handle_msg(App &app, Client *client)
 			crlf_indx = msg.find(CRLF);
 		}
 	}
-	while (bytes_read && crlf_indx != msg.npos);
+	while (crlf_indx != msg.npos);
 }
 
 void close_conn(App &app, int fd)

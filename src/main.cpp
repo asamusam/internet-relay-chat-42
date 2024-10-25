@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 
 		int listen_sock_fd = listen_sock_init(parse_port(argv[1]));
 
-		App app("ft_irc", password);
+		App app("127.0.0.1", password);
 
 		conn_loop(app, listen_sock_fd);
 

@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <sstream>
 #include <sys/epoll.h>
+#include <unistd.h>
 #include "App.hpp"
 #include "Client.hpp"
 #include "InternalError.hpp"
@@ -145,4 +146,13 @@ void handle_msg(App &app, Client *client)
 		}
 	}
 	while (bytes_read && crlf_indx != msg.npos);
+}
+
+void close_conn(App &app, int fd)
+{
+	Client *client = app.find_client_by_fd(fd);
+	handle_msg(app, client);
+	close(fd);
+	std::cout << "Peer with uuid:" << client->uuid << " closed the connection.\n";
+	/* app.remove_client(client->uuid); */
 }

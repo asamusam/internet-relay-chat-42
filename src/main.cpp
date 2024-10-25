@@ -30,6 +30,8 @@ void conn_loop(App &app, int listen_sock_fd)
 			{
 				if (fd == listen_sock_fd)
 					accept_in_conns(app, epoll_fd, listen_sock_fd);
+				else if (events[i].events & EPOLLHUP)
+					close_conn(app, fd);
 				else
 					handle_msg(app, app.find_client_by_fd(fd));
 			}

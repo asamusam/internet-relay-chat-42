@@ -34,6 +34,8 @@ class App
         ~App();
 
         void add_client(Client *new_client);
+        void remove_client(int uuid);
+
         void add_channel(Channel *new_channel);
 
         int parse_message(Client &user, std::string const &msg_string, Message &msg) const;

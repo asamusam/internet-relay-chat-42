@@ -49,6 +49,18 @@ void App::add_client(Client *new_client)
     clients[new_client->uuid] = new_client;
 }
 
+void App::remove_client(int uuid)
+{
+    std::map<int, Client *>::iterator it;
+
+    it = clients.find(uuid);
+    if (it == clients.end())
+        return ;
+    delete it->second;
+    clients.erase(uuid);
+}
+
+
 void App::add_channel(Channel *new_channel)
 {
     channels[new_channel->name] = new_channel;

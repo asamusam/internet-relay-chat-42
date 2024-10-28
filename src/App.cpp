@@ -10,6 +10,8 @@ static std::string int_to_string(int number)
 {
     std::stringstream ss;
     ss << number;
+    if (number < 10)
+        return "00" + ss.str();
     return ss.str();
 }
 

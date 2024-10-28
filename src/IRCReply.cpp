@@ -33,7 +33,7 @@ std::pair<IRCReplyCodeEnum, std::string> reply_data[] = {
     std::make_pair(RPL_INVITING,         "<channel> <nick>"),
     std::make_pair(RPL_CHANNELMODEIS,    "<channel> <mode> <mode params>"),
     std::make_pair(RPL_NOTOPIC,          "<channel> :No topic is set"),
-    std::make_pair(RPL_WELCOME,          ":Welcome to <network>, <nick>")
+    std::make_pair(RPL_WELCOME,          "<nick> :Welcome to <network>, <nick>")
 };
 
 std::map<IRCReplyCodeEnum, std::string> IRCReply::reply_messages(reply_data, reply_data + sizeof reply_data / sizeof reply_data[0]);

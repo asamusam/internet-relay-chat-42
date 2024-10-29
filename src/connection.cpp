@@ -4,7 +4,12 @@
 #include <limits>
 #include <netinet/in.h>
 #include <sstream>
+#ifdef __APPLE__
+#include <sys/event.h>
+#include <fcntl.h>
+#else
 #include <sys/epoll.h>
+#endif
 #include <unistd.h>
 #include "App.hpp"
 #include "Client.hpp"
@@ -36,9 +41,18 @@ int listen_sock_init(int port)
 	sai.sin_port = htons(port);
 	sai.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
+    #ifdef __APPLE__
+    sock_fd = socket(sai.sin_family, SOCK_STREAM, 0);
+    if (-1 == sock_fd)
+        throw (SCEM_SOCKET);
+
+    if (fcntl(sock_fd, F_SETFL, O_NONBLOCK) == -1)
+        throw (SCEM_FCNTL);
+    #else
 	sock_fd = socket(sai.sin_family, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (-1 == sock_fd)
 		throw (SCEM_SOCKET);
+    #endif
 
 	if (-1 == bind(sock_fd, (struct sockaddr *) &sai, sizeof(sai)))
 		throw (SCEM_BIND);
@@ -51,6 +65,22 @@ int listen_sock_init(int port)
 
 int epoll_init(int listen_sock_fd)
 {
+
+    #ifdef __APPLE__
+    int kq_fd = -1;
+    struct kevent ev;
+	(void) std::memset(&ev, 0, sizeof(ev));
+
+    kq_fd = kqueue();
+    if (kq_fd == -1)
+        throw (SCEM_KQUEUE);
+    
+    EV_SET(&ev, listen_sock_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    if (kevent(kq_fd, &ev, 1, NULL, 0, NULL) == -1)
+        throw (SCEM_KEVENT);
+
+    return (kq_fd);
+    #else
 	int ep_fd = -1;
 	epoll_event ev;
 	(void) std::memset(&ev, 0, sizeof(ev));
@@ -65,10 +95,26 @@ int epoll_init(int listen_sock_fd)
 		throw (SCEM_EPOLL_CTL);
 
 	return (ep_fd);
+    #endif
 }
 
 void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 {
+    #ifdef __APPLE__
+    struct kevent ev;
+	(void) std::memset(&ev, 0, sizeof(ev));
+
+    int conn_sock_fd = accept(listen_sock_fd, NULL, NULL);
+    if (-1 == conn_sock_fd)
+        throw (SCEM_ACCEPT);
+
+    if (fcntl(conn_sock_fd, F_SETFL, O_NONBLOCK) == -1)
+        throw (SCEM_FCNTL);
+
+    EV_SET(&ev, conn_sock_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    if (kevent(epoll_fd, &ev, 1, NULL, 0, NULL) == -1)
+        throw (SCEM_KEVENT);
+    #else
 	epoll_event ev;
 	(void) std::memset(&ev, 0, sizeof(ev));
 
@@ -80,6 +126,7 @@ void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 	ev.data.fd = conn_sock_fd;
 	if (-1 == epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn_sock_fd, &ev))
 		throw (SCEM_EPOLL_CTL);
+    #endif
 
 	static int uuid = 1;
 	Client *client = new Client;

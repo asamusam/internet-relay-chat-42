@@ -1,6 +1,10 @@
 CXX := c++
 INCLUDE := include
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98 -I$(INCLUDE)
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S), Darwin)
+    CXXFLAGS += -D__APPLE__
+endif
 DBCXXFLAGS := -Og -ggdb3 $(CXXFLAGS)
 SRC := \
 	src/App.cpp \

@@ -6,14 +6,9 @@
 #include <set>
 #include <sys/socket.h>
 
-static std::string int_to_string(int number)
-{
-    std::stringstream ss;
-    ss << number;
-    if (number < 10)
-        return "00" + ss.str();
-    return ss.str();
-}
+// ============================
+//   Constructor & Destructor
+// ============================
 
 App::App(std::string const &name, std::string const &password) : server_name(name), server_password(password)
 {
@@ -34,6 +29,11 @@ App::~App()
     free_clients();
 }
 
+
+// ============================
+//      Memory management
+// ============================
+
 void App::free_clients(void)
 {
     for (std::map<int, Client *>::iterator it = clients.begin(); it != clients.end(); it++)
@@ -45,6 +45,11 @@ void App::free_channels(void)
     for (std::map<std::string, Channel *>::iterator it = channels.begin(); it != channels.end(); it++)
         delete it->second;
 }
+
+
+// ============================
+//          Clients
+// ============================
 
 void App::add_client(Client *new_client)
 {
@@ -63,10 +68,163 @@ void App::remove_client(int uuid)
 }
 
 
+// ============================
+//          Channels
+// ============================
+
 void App::add_channel(Channel *new_channel)
 {
     channels[new_channel->name] = new_channel;
 }
+
+
+// ============================
+//       Helper functions
+// ============================
+
+static void skip_space(std::istringstream &msg_stream)
+{
+    while (msg_stream.peek() == ' ')
+        msg_stream.ignore(1);
+}
+
+static int split_targets(std::string const &target_str, std::vector<std::string> &targets)
+{
+    std::istringstream ss(target_str);
+    std::string target;
+
+    while (!ss.eof())
+    {
+        std::getline(ss, target, ',');
+        if (!target.empty())
+        {
+            if (std::find(targets.begin(), targets.end(), target) != targets.end())
+                return -1;
+            targets.push_back(target);
+        }
+    }
+    return 0;
+}
+
+static std::string int_to_string(int number)
+{
+    std::stringstream ss;
+    ss << number;
+    if (number < 10)
+        return "00" + ss.str();
+    return ss.str();
+}
+
+Client *App::find_client_by_nick(std::string const &nick) const
+{
+    for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
+    {
+        if (i->second->nickname == nick)
+            return i->second;
+    }
+    return NULL;
+}
+
+Client *App::find_client_by_fd(int fd) const
+{
+    for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
+    {
+        if (i->second->fd == fd)
+            return i->second;
+    }
+    return NULL;
+}
+
+
+// ============================
+//       Sending messages
+// ============================
+
+void App::send_message(Client const &client, std::string const &message) const
+{
+    std::string crlf_msg;
+
+    crlf_msg = message + CRLF;
+	std::cout << "Send msg to uuid:" << client.uuid << " ->" << message << "\n";
+	send(client.fd, crlf_msg.c_str(), crlf_msg.size(), 0);
+}
+
+void App::send_message_to_targets(Client const &user, std::string const &cmd, std::string const &msg, std::vector<std::string> const &targets) const
+{
+    Client *recipient;
+    std::map<std::string, Channel *>::const_iterator channel;
+    std::string message;
+    std::map<std::string, std::string> info;
+
+    message = ':' + user.nickname + ' ' + cmd + ' ' + msg;
+    for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
+    {
+        recipient = find_client_by_nick(*i);
+        if (recipient && recipient->is_registered)
+            send_message(*recipient, message);
+        else
+        {
+            channel = channels.find(*i);
+            if (channel != channels.end())
+                send_message_to_targets(user, cmd, *i + ' ' + msg, channel->second->get_client_nicks());
+            else
+            {
+                info["nick"] = *i;
+                send_numeric_reply(user, ERR_NOSUCHNICK, info);
+            }
+        }
+    }    
+}
+
+// ============================
+//      Numeric replies
+// ============================
+
+void App::fill_placeholders(std::string &str, std::map<std::string, std::string> const &info) const
+{
+    std::map<std::string, std::string>::const_iterator it;
+    std::size_t start_pos;
+    std::size_t end_pos;
+    std::string key;
+
+    while (true)
+    {
+        start_pos = str.find('<');
+        end_pos = str.find('>');
+        if (start_pos == std::string::npos || end_pos == std::string::npos || end_pos < start_pos)
+            break ;
+        key = str.substr(start_pos + 1, end_pos - start_pos - 1);
+        it = info.find(key);
+        if (it != info.end())
+            str.replace(start_pos, end_pos - start_pos + 1, it->second);
+        else
+            break ;
+    }
+}
+
+void App::send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const
+{
+    std::string reply_text;
+    std::string msg;
+
+    reply_text = IRCReply::get_reply_message(code);
+    fill_placeholders(reply_text, info);
+    msg = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + reply_text;
+    send_message(client, msg);
+}
+
+void App::send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::string const &msg) const
+{
+    std::string reply;
+
+    reply = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + msg;
+    send_message(client, reply);
+}
+
+
+// ============================
+//            PASS
+// ============================
 
 /*
 If the message contains multiple parameters for PASS command,
@@ -97,6 +255,11 @@ void App::pass(Client &user, std::vector<std::string> const &params)
     user.has_valid_pwd = true;
 }
 
+
+// ============================
+//          NICK
+// ============================
+
 /*
 If the nickname is already used by other client,
 the server just sends back ERR_NICKNAMEINUSE reply.
@@ -126,27 +289,6 @@ void App::nick(Client &user, std::vector<std::string> const &params)
     }
 }
 
-
-/*
-Channels names are strings (beginning with a '&' or '#' character) of
-length up to 200 characters.  Apart from the the requirement that the
-first character being either '&' or '#'; the only restriction on a
-channel name is that it may not contain any spaces (' '), a control G
-(^G or ASCII 7), or a comma (',' which is used as a list item
-separator by the protocol).
-*/
-bool App::is_valid_channel_name(std::string const &channel_name) const
-{
-    if (channel_name[0] != '&' && channel_name[0] != '#')
-        return false;
-    for (std::size_t i = 1; i < channel_name.length(); ++i)
-    {
-        if (channel_name[i] == ' ' || channel_name[i] == '\x07' || channel_name[i] == ',')
-            return false;
-    }
-    return true;
-}
-
 /*
 Nickname has a maximum length of nine (9) characters.
 <nick>>: <letter> { <letter> | <number> | <special> }
@@ -171,15 +313,10 @@ bool App::is_valid_nick(std::string const &nickname) const
     return true;
 }
 
-Client *App::find_client_by_nick(std::string const &nick) const
-{
-    for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
-    {
-        if (i->second->nickname == nick)
-            return i->second;
-    }
-    return NULL;
-}
+
+// ============================
+//          USER
+// ============================
 
 /*
 Maximum length is 12. If the username exceeds this limit, it is silently truncated.
@@ -225,6 +362,11 @@ void App::user(Client &user, std::vector<std::string> const &params)
     //std::cout << "New username: " << user.username 
     //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
 }
+
+
+// ============================
+//          JOIN
+// ============================
 
 /*
 Parameters: <channel> [<key>]
@@ -283,50 +425,30 @@ void App::join(Client &user, std::vector<std::string> const &params)
     send_numeric_reply(user, RPL_NAMREPLY, info);
 }
 
-static int split_targets(std::string const &target_str, std::vector<std::string> &targets)
+/*
+Channels names are strings (beginning with a '&' or '#' character) of
+length up to 200 characters.  Apart from the the requirement that the
+first character being either '&' or '#'; the only restriction on a
+channel name is that it may not contain any spaces (' '), a control G
+(^G or ASCII 7), or a comma (',' which is used as a list item
+separator by the protocol).
+*/
+bool App::is_valid_channel_name(std::string const &channel_name) const
 {
-    std::istringstream ss(target_str);
-    std::string target;
-
-    while (!ss.eof())
+    if (channel_name[0] != '&' && channel_name[0] != '#')
+        return false;
+    for (std::size_t i = 1; i < channel_name.length(); ++i)
     {
-        std::getline(ss, target, ',');
-        if (!target.empty())
-        {
-            if (std::find(targets.begin(), targets.end(), target) != targets.end())
-                return -1;
-            targets.push_back(target);
-        }
+        if (channel_name[i] == ' ' || channel_name[i] == '\x07' || channel_name[i] == ',')
+            return false;
     }
-    return 0;
+    return true;
 }
 
-void App::send_message_to_targets(Client const &user, std::string const &cmd, std::string const &msg, std::vector<std::string> const &targets) const
-{
-    Client *recipient;
-    std::map<std::string, Channel *>::const_iterator channel;
-    std::string message;
-    std::map<std::string, std::string> info;
 
-    message = ':' + user.nickname + ' ' + cmd + ' ' + msg;
-    for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
-    {
-        recipient = find_client_by_nick(*i);
-        if (recipient && recipient->is_registered)
-            send_message(*recipient, message);
-        else
-        {
-            channel = channels.find(*i);
-            if (channel != channels.end())
-                send_message_to_targets(user, cmd, *i + ' ' + msg, channel->second->get_client_nicks());
-            else
-            {
-                info["nick"] = *i;
-                send_numeric_reply(user, ERR_NOSUCHNICK, info);
-            }
-        }
-    }    
-}
+// ============================
+//           PRIVMSG
+// ============================
 
 /*
 Parameters: PRIVMSG <receiver>{,<receiver>} <text to be sent>
@@ -355,6 +477,11 @@ void App::privmsg(Client &user, std::vector<std::string> const &params)
 
     send_message_to_targets(user, info["command"], params[1], targets);
 }
+
+
+// ============================
+//           KICK
+// ============================
 
 /*
 Parameters: <channel> <user> [<comment>]
@@ -388,6 +515,11 @@ void App::kick(Client &user, std::vector<std::string> const &params)
         channels.erase(channel_it->first);
     }
 }
+
+
+// ============================
+//           INVITE
+// ============================
 
 /*
 Parameters: <nick> <channel>
@@ -424,6 +556,11 @@ void App::invite(Client &user, std::vector<std::string> const &params)
     send_message(*recipient, invitation_msg);
     send_numeric_reply(user, RPL_INVITING, info);
 }
+
+
+// ============================
+//           TOPIC
+// ============================
 
 /*
 Parameters: <channel> [<topic>]
@@ -675,62 +812,16 @@ std::string App::change_channel_mode(Channel *channel, channel_mode_set_t const 
             channel->remove_operator(i->first);
         }
     }
-    
+
     channel->set_mode(new_mode.mode);
     
     return (add.empty() ? add : '+' + add) + (rm.empty() ? rm : '-' + rm) + add_params + rm_params;
 }
 
-Client *App::find_client_by_fd(int fd) const
-{
-    for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
-    {
-        if (i->second->fd == fd)
-            return i->second;
-    }
-    return NULL;
-}
 
-void App::fill_placeholders(std::string &str, std::map<std::string, std::string> const &info) const
-{
-    std::map<std::string, std::string>::const_iterator it;
-    std::size_t start_pos;
-    std::size_t end_pos;
-    std::string key;
-
-    while (true)
-    {
-        start_pos = str.find('<');
-        end_pos = str.find('>');
-        if (start_pos == std::string::npos || end_pos == std::string::npos || end_pos < start_pos)
-            break ;
-        key = str.substr(start_pos + 1, end_pos - start_pos - 1);
-        it = info.find(key);
-        if (it != info.end())
-            str.replace(start_pos, end_pos - start_pos + 1, it->second);
-        else
-            break ;
-    }
-}
-
-void App::send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const
-{
-    std::string reply_text;
-    std::string msg;
-
-    reply_text = IRCReply::get_reply_message(code);
-    fill_placeholders(reply_text, info);
-    msg = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + reply_text;
-    send_message(client, msg);
-}
-
-void App::send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::string const &msg) const
-{
-    std::string reply;
-
-    reply = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + msg;
-    send_message(client, reply);
-}
+// ============================
+//         Execution
+// ============================
 
 /*
 Runs the command and sends appropriate replies.
@@ -752,20 +843,9 @@ void App::execute_message(Client &user, Message const &msg)
 }
 
 
-void App::send_message(Client const &client, std::string const &message) const
-{
-    std::string crlf_msg;
-
-    crlf_msg = message + CRLF;
-	std::cout << "Send msg to uuid:" << client.uuid << " ->" << message << "\n";
-	send(client.fd, crlf_msg.c_str(), crlf_msg.size(), 0);
-}
-
-static void skip_space(std::istringstream &msg_stream)
-{
-    while (msg_stream.peek() == ' ')
-        msg_stream.ignore(1);
-}
+// ============================
+//          Parsing
+// ============================
 
 /*
 On success, returns 0 and fills the Message structure provided.

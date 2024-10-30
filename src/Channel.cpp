@@ -4,11 +4,18 @@
 #include <algorithm>
 #include <limits>
 
+channel_mode_map_t Channel::supported_modes[] = {
+    {INVITE_ONLY, 'i'},
+    {TOPIC_LOCK, 't'},
+    {CHANNEL_KEY, 'k'},
+    {USER_LIMIT, 'l'}
+};
+
 Channel::Channel(std::string const &name)
 {
     this->name = name;
+    this->mode = 0;
     user_limit = std::numeric_limits<unsigned int>::max();
-    modes = "+";
 }
 
 void Channel::set_topic(std::string const &topic)
@@ -58,19 +65,38 @@ std::string Channel::get_client_nicks_str(void) const
     return res;
 }
 
+std::vector<std::string> const &Channel::get_operators(void) const
+{
+    return operators;
+}
+
+// CHECK CHANNEL MODE //
+
 bool Channel::is_invite_only(void) const
 {
-    if (modes.find('i') == std::string::npos)
-        return false;
-    return true;
+    return mode & INVITE_ONLY;
 }
 
 bool Channel::is_in_topic_protected_mode(void) const
 {
-    if (modes.find('t') == std::string::npos)
-        return false;
-    return true;
+    return mode & TOPIC_LOCK;
 }
+
+bool Channel::is_in_user_limit_mode(void) const
+{
+    return mode & USER_LIMIT;
+}
+
+bool Channel::is_key_protected(void) const
+{
+    return mode & CHANNEL_KEY;
+}
+
+// ---------------------- //
+
+
+
+
 
 bool Channel::is_invited(std::string const &nick) const
 {
@@ -113,21 +139,19 @@ void Channel::remove_operator(std::string const &nick)
 
 bool Channel::is_full(void) const
 {
-    if (modes.find('l') == std::string::npos)
-        return false;
-    return clients.size() == user_limit;
+    if (mode & USER_LIMIT)
+        return clients.size() == user_limit;
+    return false;
+}
+
+int Channel::get_user_limit(void) const
+{
+    return user_limit;
 }
 
 void Channel::set_user_limit(int limit)
 {
     user_limit = limit;
-}
-
-bool Channel::is_key_protected(void) const
-{
-    if (modes.find('k') == std::string::npos)
-        return false;
-    return true;
 }
 
 // TODO: hashing?
@@ -152,25 +176,14 @@ bool Channel::is_channel_operator(std::string const &nick) const
     return true;
 }
 
-void Channel::add_mode(char new_mode)
+unsigned short Channel::get_mode(void) const
 {
-    if (modes.find(new_mode) == std::string::npos)
-        modes.insert(modes.end(), new_mode);
+    return mode;
 }
 
-void Channel::remove_mode(char new_mode)
+void Channel::set_mode(unsigned short mode)
 {
-    size_t index;
-
-    index = modes.find(new_mode);
-    if (index == std::string::npos)
-        return;
-    modes.erase(index);
-}
-
-std::string const &Channel::get_modes(void) const
-{
-    return modes;
+    this->mode = mode;
 }
 
 void Channel::set_key(std::string const &key)
@@ -178,7 +191,38 @@ void Channel::set_key(std::string const &key)
     this->key = key;
 }
 
+std::string Channel::get_mode_string(std::string const &nick) const
+{
+    std::string mode_string("+");
+    std::string params;
+    size_t arr_size;
+
+    arr_size = sizeof(supported_modes) / sizeof(channel_mode_map_t);
+    for (size_t i = 0; i < arr_size; i++)
+    {
+        if (this->mode & supported_modes[i].mode)
+        {
+            mode_string += supported_modes[i].mode_char;
+            switch (supported_modes[i].mode)
+            {
+            case CHANNEL_KEY:
+                if (this->is_channel_operator(nick))
+                    params += ' ' + this->key;
+                break;
+            case USER_LIMIT:
+                params += ' ' + this->user_limit;
+            
+            default:
+                break;
+            }
+        }
+    }
+    return mode_string + params;
+}
+
+
 std::string const &Channel::get_key(void) const
 {
     return key;
 }
+

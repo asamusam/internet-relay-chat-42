@@ -4,6 +4,29 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <stack>
+
+enum channel_mode_enum {
+    INVITE_ONLY = 1 << 0,
+    TOPIC_LOCK  = 1 << 1,
+    CHANNEL_KEY = 1 << 2,
+    USER_LIMIT  = 1 << 3
+};
+
+typedef struct channel_mode_map_s
+{
+    channel_mode_enum mode;
+    char              mode_char;
+
+} channel_mode_map_t;
+
+typedef struct channel_mode_set_s
+{
+    unsigned short mode;
+    std::map<std::string, std::stack<char> > ops;
+    std::string key;
+    std::string limit;
+} channel_mode_set_t;
 
 class Channel
 {
@@ -13,11 +36,12 @@ class Channel
         std::vector<std::string> clients;
         std::vector<std::string> operators;
         std::vector<std::string> invitations;
-        std::string modes;
+        unsigned short mode;
         unsigned int user_limit;
 
     public:
         std::string name;
+        static channel_mode_map_t supported_modes[4];
     
     public:
         Channel(std::string const &name);
@@ -26,6 +50,8 @@ class Channel
         void set_topic(std::string const &topic);
 
         int get_client_count(void) const;
+
+        int get_user_limit(void) const;
         void set_user_limit(int limit);
 
         void add_client(std::string const &nick);
@@ -34,8 +60,11 @@ class Channel
         std::vector<std::string> const &get_client_nicks(void) const;
         std::string get_client_nicks_str(void) const;
 
+        std::vector<std::string> const &get_operators(void) const;
+
         bool is_invite_only(void) const;
         bool is_full(void) const;
+        bool is_in_user_limit_mode(void) const;
         bool is_key_protected(void) const;
         bool is_in_topic_protected_mode(void) const;
 
@@ -50,9 +79,9 @@ class Channel
         void add_operator(std::string const &nick);
         void remove_operator(std::string const &nick);
 
-        void add_mode(char mode);
-        void remove_mode(char mode);
-        std::string const &get_modes(void) const;
+        unsigned short get_mode(void) const;
+        void set_mode(unsigned short mode);
+        std::string get_mode_string(std::string const &nick) const;
 
         void set_key(std::string const &key);
         std::string const &get_key(void) const;

@@ -55,15 +55,11 @@ class Channel
 
         std::vector<std::string> const &get_operators(void) const;
 
-        bool is_invite_only(void) const;
         bool is_full(void) const;
-        bool is_in_user_limit_mode(void) const;
-        bool is_key_protected(void) const;
-        bool is_in_topic_protected_mode(void) const;
-
+        bool is_in_mode(chan_mode_enum mode) const;
+        bool is_matching_key(std::string const &key) const;
         bool is_on_channel(std::string const &nick) const;
         bool is_invited(std::string const &nick) const;
-        bool is_matching_key(std::string const &key) const;
         bool is_channel_operator(std::string const &nick) const;
 
         void add_invitation(std::string const &nick);

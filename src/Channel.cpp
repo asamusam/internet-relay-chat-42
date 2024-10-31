@@ -73,24 +73,9 @@ std::vector<std::string> const &Channel::get_operators(void) const
 
 // CHECK CHANNEL MODE //
 
-bool Channel::is_invite_only(void) const
+bool Channel::is_in_mode(chan_mode_enum mode) const
 {
-    return mode & INVITE_ONLY;
-}
-
-bool Channel::is_in_topic_protected_mode(void) const
-{
-    return mode & TOPIC_LOCK;
-}
-
-bool Channel::is_in_user_limit_mode(void) const
-{
-    return mode & USER_LIMIT;
-}
-
-bool Channel::is_key_protected(void) const
-{
-    return mode & CHANNEL_KEY;
+    return this->mode & mode;
 }
 
 // ---------------------- //

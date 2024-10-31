@@ -396,11 +396,11 @@ void App::join(Client &user, std::vector<std::string> const &params)
         channel = channel_it->second;
         if (channel->is_on_channel(user.nickname))
             return ;
-        if (channel->is_invite_only() && !channel->is_invited(user.nickname))
+        if (channel->is_in_mode(INVITE_ONLY) && !channel->is_invited(user.nickname))
             return send_numeric_reply(user, ERR_INVITEONLYCHAN, info);
         if (channel->is_full())
             return send_numeric_reply(user, ERR_CHANNELISFULL, info);
-        if (channel->is_key_protected())
+        if (channel->is_in_mode(CHANNEL_KEY))
         {
             if (params.size() < 2)
                 return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
@@ -547,7 +547,7 @@ void App::invite(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_NOSUCHCHANNEL, info);
     if (!channel_it->second->is_on_channel(user.nickname))
         return send_numeric_reply(user, ERR_NOTONCHANNEL, info);
-    if (channel_it->second->is_invite_only() && !channel_it->second->is_channel_operator(user.nickname))
+    if (channel_it->second->is_in_mode(INVITE_ONLY) && !channel_it->second->is_channel_operator(user.nickname))
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     if (channel_it->second->is_on_channel(info["nick"]))
         return send_numeric_reply(user, ERR_USERONCHANNEL, info);
@@ -589,7 +589,7 @@ void App::topic(Client &user, std::vector<std::string> const &params)
         else
             return send_numeric_reply(user, RPL_TOPIC, info);
     }
-    if (channel_it->second->is_in_topic_protected_mode() && !channel_it->second->is_channel_operator(user.nickname))
+    if (channel_it->second->is_in_mode(TOPIC_LOCK) && !channel_it->second->is_channel_operator(user.nickname))
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     info["topic"] = params[1];
     if (info["topic"] == ":")

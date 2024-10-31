@@ -66,11 +66,6 @@ std::string Channel::get_client_nicks_str(void) const
     return res;
 }
 
-std::vector<std::string> const &Channel::get_operators(void) const
-{
-    return operators;
-}
-
 // CHECK CHANNEL MODE //
 
 bool Channel::is_in_mode(chan_mode_enum mode) const
@@ -107,22 +102,6 @@ void Channel::remove_invitation(std::string const &nick)
     invitations.erase(it);
 }
 
-void Channel::add_operator(std::string const &nick)
-{
-    if (std::find(operators.begin(), operators.end(), nick) == operators.end())
-        operators.push_back(nick);
-}
-
-void Channel::remove_operator(std::string const &nick)
-{
-    std::vector<std::string>::iterator it;
-
-    it = std::find(operators.begin(), operators.end(), nick);
-    if (it == operators.end())
-        return ;
-    operators.erase(it);
-}
-
 bool Channel::is_full(void) const
 {
     if (mode & USER_LIMIT)
@@ -140,12 +119,9 @@ void Channel::set_user_limit(int limit)
     user_limit = limit;
 }
 
-// TODO: hashing?
 bool Channel::is_matching_key(std::string const &key) const
 {
-    if (this->key == key)
-        return true;
-    return false;
+    return this->get_key() == key;
 }
 
 bool Channel::is_on_channel(std::string const &nick) const
@@ -157,9 +133,7 @@ bool Channel::is_on_channel(std::string const &nick) const
 
 bool Channel::is_channel_operator(std::string const &nick) const
 {
-    if (std::find(operators.begin(), operators.end(), nick) == operators.end())
-        return false;
-    return true;
+    return is_type_b_param(CHAN_OP, nick);
 }
 
 unsigned short Channel::get_mode(void) const
@@ -172,9 +146,42 @@ void Channel::set_mode(unsigned short mode)
     this->mode = mode;
 }
 
-void Channel::set_key(std::string const &key)
+std::string Channel::get_type_c_param(chan_mode_enum mode) const
 {
-    this->key = key;
+    if (type_c_params.count(mode) == 0)
+        return "";
+    return type_c_params.at(mode);
+}
+
+void Channel::set_type_c_param(chan_mode_enum mode, std::string const &value)
+{
+    type_c_params[mode] = value;
+    if (mode == USER_LIMIT)
+        user_limit = std::atoi(value.c_str());
+}
+
+bool Channel::is_type_b_param(chan_mode_enum mode, std::string const &value) const
+{
+    if (type_b_params.count(mode) == 0)
+        return false;
+    if (std::find(type_b_params.at(mode).begin(), type_b_params.at(mode).end(), value) == type_b_params.at(mode).end())
+        return false;
+    return true;
+}
+
+void Channel::add_type_b_param(chan_mode_enum mode, std::string const &value)
+{
+    type_b_params[mode].push_back(value);
+}
+
+void Channel::remove_type_b_param(chan_mode_enum mode, std::string const &value)
+{
+    std::vector<std::string>::iterator it;
+
+    it = std::find(type_b_params[mode].begin(), type_b_params[mode].end(), value);
+    if (it == type_b_params[mode].end())
+        return ;
+    type_b_params[mode].erase(it);
 }
 
 std::string Channel::get_mode_string(std::string const &nick) const
@@ -193,7 +200,7 @@ std::string Channel::get_mode_string(std::string const &nick) const
             {
             case CHANNEL_KEY:
                 if (this->is_channel_operator(nick))
-                    params += ' ' + this->key;
+                    params += ' ' + this->get_key();
                 break;
             case USER_LIMIT:
                 params += ' ' + this->user_limit;
@@ -207,8 +214,8 @@ std::string Channel::get_mode_string(std::string const &nick) const
 }
 
 
-std::string const &Channel::get_key(void) const
+std::string Channel::get_key(void) const
 {
-    return key;
+    return get_type_c_param(CHANNEL_KEY);
 }
 

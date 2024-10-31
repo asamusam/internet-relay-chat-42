@@ -25,12 +25,12 @@ class Channel
 {
     private:
         std::vector<std::string> clients;
-        std::vector<std::string> operators;
         std::vector<std::string> invitations;
         unsigned short mode;
         unsigned int user_limit;
+        std::map<chan_mode_enum, std::vector<std::string> > type_b_params;
+        std::map<chan_mode_enum, std::string> type_c_params;
         std::string topic;
-        std::string key;
 
     public:
         std::string name;
@@ -53,8 +53,6 @@ class Channel
         std::vector<std::string> const &get_client_nicks(void) const;
         std::string get_client_nicks_str(void) const;
 
-        std::vector<std::string> const &get_operators(void) const;
-
         bool is_full(void) const;
         bool is_in_mode(chan_mode_enum mode) const;
         bool is_matching_key(std::string const &key) const;
@@ -65,15 +63,18 @@ class Channel
         void add_invitation(std::string const &nick);
         void remove_invitation(std::string const &nick);
 
-        void add_operator(std::string const &nick);
-        void remove_operator(std::string const &nick);
-
         unsigned short get_mode(void) const;
         void set_mode(unsigned short mode);
         std::string get_mode_string(std::string const &nick) const;
 
-        void set_key(std::string const &key);
-        std::string const &get_key(void) const;
+        std::string get_type_c_param(chan_mode_enum mode) const;
+        void set_type_c_param(chan_mode_enum mode, std::string const &value);
+
+        void add_type_b_param(chan_mode_enum mode, std::string const &value);
+        void remove_type_b_param(chan_mode_enum mode, std::string const &value);
+        bool is_type_b_param(chan_mode_enum mode, std::string const &value) const;
+
+        std::string get_key(void) const;
 
 };
 

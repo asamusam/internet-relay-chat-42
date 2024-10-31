@@ -12,6 +12,14 @@
 
 #define CRLF "\r\n"
 
+typedef struct chan_mode_set_s
+{
+    unsigned short mode;
+    unsigned int user_limit;
+    std::map<chan_mode_enum, std::map<std::string, std::stack<char> > > type_b_params;
+    std::map<chan_mode_enum, std::string> type_c_params;
+} chan_mode_set_t;
+
 class App
 {
     public:
@@ -70,8 +78,12 @@ class App
         void free_channels(void);
 
         static bool mode_str_has_enough_params(std::string const &mode_str, size_t param_count);
-        channel_mode_set_t parse_mode_string(Client const &user, Channel const *channel, std::string const &mode_str, std::vector<std::string> const &params) const;
-        std::string change_channel_mode(Channel *channel, channel_mode_set_t const &channel_mode_set);
+        static bool mode_requires_param(char mode, char sign);
+        void parse_type_b_mode(chan_mode_set_t &mode_set, chan_mode_enum mode, char sign, std::string const &param) const;
+        static void parse_type_c_mode(chan_mode_set_t &mode_set, chan_mode_enum mode, char sign, std::string const &param);
+        static void parse_type_d_mode(chan_mode_set_t &mode_set, chan_mode_enum mode, char sign);
+        chan_mode_set_t parse_mode_string(Client const &user, Channel const *channel, std::string const &mode_str, std::vector<std::string> const &params) const;
+        std::string change_channel_mode(Channel *channel, chan_mode_set_t const &channel_mode_set);
 };
 
 #endif // APP_HPP

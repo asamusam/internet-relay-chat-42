@@ -4,11 +4,12 @@
 #include <algorithm>
 #include <limits>
 
-channel_mode_map_t Channel::supported_modes[] = {
-    {INVITE_ONLY, 'i'},
-    {TOPIC_LOCK, 't'},
-    {CHANNEL_KEY, 'k'},
-    {USER_LIMIT, 'l'}
+chan_mode_map_t Channel::supported_modes[] = {
+    {INVITE_ONLY, 'i', 'd'},
+    {TOPIC_LOCK, 't', 'd'},
+    {CHANNEL_KEY, 'k', 'c'},
+    {USER_LIMIT, 'l', 'c'},
+    {CHAN_OP, 'o', 'b'}
 };
 
 Channel::Channel(std::string const &name)
@@ -197,7 +198,7 @@ std::string Channel::get_mode_string(std::string const &nick) const
     std::string params;
     size_t arr_size;
 
-    arr_size = sizeof(supported_modes) / sizeof(channel_mode_map_t);
+    arr_size = sizeof(supported_modes) / sizeof(chan_mode_map_t);
     for (size_t i = 0; i < arr_size; i++)
     {
         if (this->mode & supported_modes[i].mode)

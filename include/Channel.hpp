@@ -6,42 +6,35 @@
 #include <map>
 #include <stack>
 
-enum channel_mode_enum {
+enum chan_mode_enum {
     INVITE_ONLY = 1 << 0,
     TOPIC_LOCK  = 1 << 1,
     CHANNEL_KEY = 1 << 2,
-    USER_LIMIT  = 1 << 3
+    USER_LIMIT  = 1 << 3,
+    CHAN_OP     = 1 << 4
 };
 
-typedef struct channel_mode_map_s
+typedef struct chan_mode_map_s
 {
-    channel_mode_enum mode;
+    chan_mode_enum    mode;
     char              mode_char;
-
-} channel_mode_map_t;
-
-typedef struct channel_mode_set_s
-{
-    unsigned short mode;
-    std::map<std::string, std::stack<char> > ops;
-    std::string key;
-    std::string limit;
-} channel_mode_set_t;
+    char              mode_type;
+} chan_mode_map_t;
 
 class Channel
 {
     private:
-        std::string topic;
-        std::string key;
         std::vector<std::string> clients;
         std::vector<std::string> operators;
         std::vector<std::string> invitations;
         unsigned short mode;
         unsigned int user_limit;
+        std::string topic;
+        std::string key;
 
     public:
         std::string name;
-        static channel_mode_map_t supported_modes[4];
+        static chan_mode_map_t supported_modes[5];
     
     public:
         Channel(std::string const &name);

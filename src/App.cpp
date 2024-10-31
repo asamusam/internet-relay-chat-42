@@ -608,7 +608,7 @@ void App::mode(Client &user, std::vector<std::string> const &params)
 {
     std::map<std::string, std::string> info;
     std::map<std::string, Channel *>::const_iterator channel_it;
-    channel_mode_set_t change_mode;
+    chan_mode_set_t change_mode;
     std::string change_mode_str;
     Channel *channel;
     
@@ -650,16 +650,17 @@ void App::mode(Client &user, std::vector<std::string> const &params)
 
 bool App::mode_str_has_enough_params(std::string const &mode_str, size_t param_count)
 {
-    size_t req_param_count = 0;
     char curr_sign = mode_str[0];
 
+    size_t req_param_count = 0;
     for (std::string::const_iterator i = mode_str.begin(); i < mode_str.end(); i++)
     {
         if (*i == '+' || *i == '-')
+        {
             curr_sign = *i;
-        else if (*i == 'o')
-            req_param_count += 1;
-        else if (curr_sign == '+' && (*i == 'k' || *i == 'l'))
+            continue ;
+        }
+        if (mode_requires_param(*i, curr_sign))
             req_param_count += 1;
     }
 
@@ -668,93 +669,130 @@ bool App::mode_str_has_enough_params(std::string const &mode_str, size_t param_c
     return true;
 }
 
-channel_mode_set_t App::parse_mode_string(Client const &user, Channel const *channel, std::string const &mode_str, std::vector<std::string> const &params) const
+/*
+Type A: MUST always have a parameter;
+Type B: MUST always have a parameter;
+Type C: MUST have a parameter when being set, and MUST NOT have a parameter when being unset;
+Type D: MUST NOT have a parameter.
+*/
+bool App::mode_requires_param(char mode, char sign)
 {
-    std::map<std::string, std::string> info;
-    channel_mode_set_t new_mode;
-    std::string allowed_modes;
-    char curr_sign;
-    Client *target;
-    size_t index;
+    char type;
 
-    new_mode.mode = channel->get_mode();
-    new_mode.key = channel->get_key();
-    new_mode.limit = channel->get_user_limit();
-    info["channel"] = channel->name;
-    allowed_modes = "itklo";
-    curr_sign = mode_str[0];
-    index = 2;
-
-    for (std::string::const_iterator i = mode_str.begin(); i < mode_str.end(); i++)
+    size_t arr_size = sizeof(Channel::supported_modes) / sizeof(chan_mode_map_t);
+    for (size_t i = 0; i < arr_size; i++)
+    {
+        if (Channel::supported_modes[i].mode_char == mode)
         {
-            if (*i == '+' || *i == '-')
-                curr_sign = *i;
-            else if (allowed_modes.find(*i) == std::string::npos)
-            {
-                info["char"] = *i;
-                send_numeric_reply(user, ERR_UNKNOWNMODE, info);
-                continue ;
-            }
-            else {
-                switch (*i)
-                {
-                    case 'o': // type_b
-                        target = find_client_by_nick(params[index]);
-                        info["nick"] = params[index++];
-                        if (!target)
-                            send_numeric_reply(user, ERR_NOSUCHNICK, info);
-                        else if (!channel->is_on_channel(target->nickname))
-                            send_numeric_reply(user, ERR_NOTONCHANNEL, info);
-                        else
-                        {
-                            if ((curr_sign == '-' && !new_mode.ops[target->nickname].empty() && new_mode.ops[target->nickname].top() == '+') || \
-                                (curr_sign == '+' && !new_mode.ops[target->nickname].empty() && new_mode.ops[target->nickname].top() == '-'))
-                                new_mode.ops[target->nickname].pop();
-                            new_mode.ops[target->nickname].push(curr_sign);
-                        }
-                        break;
-                    case 'k': // type_c
-                        if (curr_sign == '+' && new_mode.mode & CHANNEL_KEY)
-                        {
-                            send_numeric_reply(user, ERR_KEYSET, info);
-                            ++index;
-                        }
-                        else if (curr_sign == '+')
-                        {
-                            new_mode.mode |= CHANNEL_KEY;
-                            new_mode.key = params[index++];
-                        }
-                        else
-                            new_mode.mode &= ~CHANNEL_KEY;
-                        break;
-                    case 'l': // type_c
-                        if (curr_sign == '+')
-                        {
-                            new_mode.mode |= USER_LIMIT;
-                            new_mode.limit = params[index++];
-                        }
-                        else
-                            new_mode.mode &= ~USER_LIMIT;
-                        break;
-                    case 'i': // type_d
-                        if (curr_sign == '+')
-                            new_mode.mode |= INVITE_ONLY;
-                        else
-                            new_mode.mode &= ~INVITE_ONLY;
-                        break ;
-                    case 't':
-                        if (curr_sign == '+')
-                            new_mode.mode |= TOPIC_LOCK;
-                        else
-                            new_mode.mode &= ~TOPIC_LOCK;
-                        break ;
-                }
-            }
+            type = Channel::supported_modes[i].mode_type;
+            return type == 'a' || type == 'b' || (type == 'c' && sign == '+');
         }
-    return new_mode;
+    }
+    return false;
 }
 
-std::string App::change_channel_mode(Channel *channel, channel_mode_set_t const &new_mode)
+chan_mode_set_t App::parse_mode_string(Client const &user, Channel const *channel, std::string const &mode_str, std::vector<std::string> const &params) const
+{
+    std::map<std::string, std::string> info;
+    chan_mode_set_t mode_set;
+    Client *target;
+
+    mode_set.mode = channel->get_mode();
+    mode_set.type_c_params[CHANNEL_KEY] = channel->get_key();
+    mode_set.user_limit = channel->get_user_limit();
+    info["channel"] = channel->name;
+
+    char sign = mode_str[0];
+    size_t index = 2;
+    size_t supported_modes_size = sizeof(Channel::supported_modes) / sizeof(chan_mode_map_t);
+    for (std::string::const_iterator ch = mode_str.begin(); ch < mode_str.end(); ch++)
+    {
+        if (*ch == '+' || *ch == '-')
+        {
+            sign = *ch;
+            continue;
+        }
+        else
+        {
+            bool unknown = true;
+            for (size_t i = 0; i < supported_modes_size; i++)
+            {
+                if (Channel::supported_modes[i].mode_char == *ch)
+                {
+                    switch (Channel::supported_modes[i].mode_type)
+                    {
+                        case 'b':
+                            target = find_client_by_nick(params[index]);
+                            info["nick"] = params[index++];
+                            if (!target)
+                                send_numeric_reply(user, ERR_NOSUCHNICK, info);
+                            else if (!channel->is_on_channel(target->nickname))
+                                send_numeric_reply(user, ERR_NOTONCHANNEL, info);
+                            else
+                                parse_type_b_mode(mode_set, Channel::supported_modes[i].mode, sign, target->nickname);
+                            break;
+                        
+                        case 'c':
+                            if (*ch == 'k' && sign == '+' && mode_set.mode & CHANNEL_KEY)
+                                send_numeric_reply(user, ERR_KEYSET, info);
+                            else
+                                parse_type_c_mode(mode_set, Channel::supported_modes[i].mode, sign, params[index]);
+                            if (sign == '+')
+                                ++index;
+                            break;
+                        
+                        case 'd':
+                            parse_type_d_mode(mode_set, Channel::supported_modes[i].mode, sign);
+                            break;
+                        
+                        default:
+                            break;                    
+                    }
+                    unknown = false;
+                    break;
+                }
+            }
+            if (unknown)
+            {
+                info["char"] = *ch;
+                send_numeric_reply(user, ERR_UNKNOWNMODE, info);
+            }
+        }
+    }
+    return mode_set;
+}
+
+void App::parse_type_b_mode(chan_mode_set_t &mode_set, chan_mode_enum mode, char sign, std::string const &param) const
+{
+    if (!mode_set.type_b_params[mode][param].empty())
+    {
+        if ((sign == '+' && mode_set.type_b_params[mode][param].top() == '-') || \
+            (sign == '-' && mode_set.type_b_params[mode][param].top() == '+'))
+            mode_set.type_b_params[mode][param].pop();
+    }
+    mode_set.type_b_params[mode][param].push(sign);
+}
+
+void App::parse_type_c_mode(chan_mode_set_t &mode_set, chan_mode_enum mode, char sign, std::string const &param)
+{
+    if (sign == '+')
+    {
+        mode_set.mode |= mode;
+        mode_set.type_c_params[mode] = param;
+    }
+    else
+        mode_set.mode &= ~mode;
+}
+
+void App::parse_type_d_mode(chan_mode_set_t &mode_set, chan_mode_enum mode, char sign)
+{
+    if (sign == '+')
+        mode_set.mode |= mode;
+    else
+        mode_set.mode &= ~mode;
+}
+
+std::string App::change_channel_mode(Channel *channel, chan_mode_set_t const &new_mode)
 {
     unsigned short old_mode;
     unsigned short add_modes;
@@ -769,7 +807,7 @@ std::string App::change_channel_mode(Channel *channel, channel_mode_set_t const 
     rm_modes = old_mode & ~new_mode.mode;
 
     // type d
-    size_t arr_size = sizeof(Channel::supported_modes) / sizeof(channel_mode_map_t);
+    size_t arr_size = sizeof(Channel::supported_modes) / sizeof(chan_mode_map_t);
     for (size_t i = 0; i < arr_size; i++)
     {
         if (add_modes & Channel::supported_modes[i].mode)
@@ -780,42 +818,65 @@ std::string App::change_channel_mode(Channel *channel, channel_mode_set_t const 
     }
 
     // type c
-    if (new_mode.mode & CHANNEL_KEY && new_mode.key != channel->get_key())
+    for (std::map<chan_mode_enum, std::string>::const_iterator i = new_mode.type_c_params.begin(); i != new_mode.type_c_params.end(); i++)
     {
-        channel->set_key(new_mode.key);
-        if (old_mode & CHANNEL_KEY)
-            add += 'k';
-    }
-
-    int new_limit = std::atoi(new_mode.limit.c_str());
-    if (new_mode.mode & USER_LIMIT && new_limit != channel->get_user_limit())
-    {
-        channel->set_user_limit(new_limit);
-        if (old_mode & CHANNEL_KEY)
-            add += 'l';
-        add_params += ' ' + new_mode.limit;
+        if (new_mode.mode & i->first)
+        {
+            int new_limit;
+            switch (i->first)
+            {
+            case CHANNEL_KEY:
+                if (!channel->is_matching_key(i->second))
+                {
+                    channel->set_key(i->second);
+                    if (old_mode & i->first)
+                        add += 'k';
+                }
+                break;
+            case USER_LIMIT:
+                new_limit = std::atoi(i->second.c_str());
+                if (new_limit != channel->get_user_limit())
+                {
+                    channel->set_user_limit(new_limit);
+                    if (old_mode & i->first)
+                        add += 'l';
+                }
+                add_params += ' ' + i->second;
+                break;
+            
+            default:
+                break;
+            }
+        }
     }
 
     // type b
-    for (std::map<std::string, std::stack<char> >::const_iterator i = new_mode.ops.begin(); i != new_mode.ops.end(); i++)
+    for (std::map<chan_mode_enum, std::map<std::string, std::stack<char> > >::const_iterator i = new_mode.type_b_params.begin(); i != new_mode.type_b_params.end(); i++)
     {
-        if (i->second.top() == '+' && !channel->is_channel_operator(i->first))
+        if (i->first == CHAN_OP)
         {
-            add += 'o';
-            add_params += ' ' + i->first;
-            channel->add_operator(i->first);
-        }
-        else if (i->second.top() == '-' && channel->is_channel_operator(i->first))
-        {
-            rm += 'o';
-            rm_params += ' ' + i->first;
-            channel->remove_operator(i->first);
-        }
+            for (std::map<std::string, std::stack<char> >::const_iterator it = i->second.begin(); it != i->second.end(); i++)
+            {
+                if (it->second.top() == '+' && !channel->is_channel_operator(it->first))
+                {
+                    add += 'o';
+                    add_params += ' ' + it->first;
+                    channel->add_operator(it->first);
+                }
+                else if (it->second.top() == '-' && channel->is_channel_operator(it->first))
+                {
+                    rm += 'o';
+                    rm_params += ' ' + it->first;
+                    channel->remove_operator(it->first);
+                }
+            }
+        }   
     }
 
     channel->set_mode(new_mode.mode);
     
     return (add.empty() ? add : '+' + add) + (rm.empty() ? rm : '-' + rm) + add_params + rm_params;
+
 }
 
 

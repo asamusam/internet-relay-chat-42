@@ -60,6 +60,7 @@ class App
         void invite(Client &user, std::vector<std::string> const &params);
         void topic(Client &user, std::vector<std::string> const &params);
         void mode(Client &user, std::vector<std::string> const &params);
+        void ping(Client &user, std::vector<std::string> const &params);
 
         bool is_valid_nick(std::string const &nickname) const;
         bool is_valid_channel_name(std::string const &channel_name) const;
@@ -72,6 +73,7 @@ class App
         void fill_placeholders(std::string &str, std::map<std::string, std::string> const &info) const;
 
         void send_message(Client const &user, std::string const &msg) const;
+        void send_message(std::string const &user, Channel *channel, std::string const &msg) const;
         void send_message_to_targets(Client const &user, std::string const &cmd, std::string const &msg, std::vector<std::string> const &targets) const;
 
         void free_clients(void);

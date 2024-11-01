@@ -21,6 +21,8 @@ App::App(std::string const &name, std::string const &password) : server_name(nam
     commands.push_back((Command){"INVITE",  &App::invite});
     commands.push_back((Command){"TOPIC",   &App::topic});
     commands.push_back((Command){"MODE",    &App::mode});
+    commands.push_back((Command){"PING",    &App::ping});
+    commands.push_back((Command){"WHOIS",   NULL});
 }
 
 App::~App()
@@ -115,6 +117,11 @@ static std::string int_to_string(int number)
     return ss.str();
 }
 
+static std::string create_message(std::string const &prefix, std::string const &cmd, std::string const &msg)
+{
+    return ':' + prefix + ' ' + cmd + ' ' + msg;
+}
+
 Client *App::find_client_by_nick(std::string const &nick) const
 {
     for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
@@ -149,6 +156,22 @@ void App::send_message(Client const &client, std::string const &message) const
 	send(client.fd, crlf_msg.c_str(), crlf_msg.size(), 0);
 }
 
+void App::send_message(std::string const &user, Channel *channel, std::string const &msg) const
+{
+    std::vector<std::string> targets;
+    Client *recipient;
+
+    targets = channel->get_client_nicks();
+    for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
+    {
+        if (*i == user)
+            continue;
+        recipient = find_client_by_nick(*i);
+        if (recipient)
+            send_message(*recipient, msg);
+    }
+}
+
 void App::send_message_to_targets(Client const &user, std::string const &cmd, std::string const &msg, std::vector<std::string> const &targets) const
 {
     Client *recipient;
@@ -156,22 +179,27 @@ void App::send_message_to_targets(Client const &user, std::string const &cmd, st
     std::string message;
     std::map<std::string, std::string> info;
 
-    message = ':' + user.nickname + ' ' + cmd + ' ' + msg;
     for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
     {
+        message = create_message(user.nickname, cmd, *i + ' ' + msg);
         recipient = find_client_by_nick(*i);
         if (recipient && recipient->is_registered)
             send_message(*recipient, message);
         else
         {
             channel = channels.find(*i);
-            if (channel != channels.end())
-                send_message_to_targets(user, cmd, *i + ' ' + msg, channel->second->get_client_nicks());
-            else
+            if (channel == channels.end())
             {
                 info["nick"] = *i;
                 send_numeric_reply(user, ERR_NOSUCHNICK, info);
             }
+            else if (!channel->second->is_on_channel(user.nickname))
+            {
+                info["channel"] = *i;
+                send_numeric_reply(user, ERR_NOTONCHANNEL, info);
+            }
+            else
+                send_message(user.nickname, channel->second, message);
         }
     }    
 }
@@ -417,7 +445,7 @@ void App::join(Client &user, std::vector<std::string> const &params)
         this->channels[channel->name] = channel;
     }
     channel->add_client(user.nickname);
-    send_message_to_targets(user, info["command"], info["channel"], channel->get_client_nicks());
+    send_message(user.nickname, channel, create_message(user.nickname, info["command"], info["channel"]));
     info["topic"] = channel->get_topic();
     info["nicks"] = channel->get_client_nicks_str();
     if (!info["topic"].empty())
@@ -507,7 +535,7 @@ void App::kick(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     if (!channel_it->second->is_on_channel(info["user"]))
         return send_numeric_reply(user, ERR_USERNOTINCHANNEL, info);
-    send_message_to_targets(user, info["command"], info["channel"] + ' ' + info["user"], channel_it->second->get_client_nicks());
+    send_message(user.nickname, channel_it->second, create_message(user.nickname, info["command"], info["channel"] + ' ' + info["user"]));
     channel_it->second->remove_client(info["user"]);
     if (channel_it->second->get_client_count() == 0)
     {
@@ -596,7 +624,7 @@ void App::topic(Client &user, std::vector<std::string> const &params)
         channel_it->second->set_topic("");
     else
         channel_it->second->set_topic(info["topic"]);
-    send_message_to_targets(user, info["command"], info["channel"] + ' ' + info["topic"], channel_it->second->get_client_nicks());
+    send_message(user.nickname, channel_it->second, create_message(user.nickname, info["command"], info["channel"] + ' ' + info["topic"]));
 }
 
 
@@ -647,7 +675,7 @@ void App::mode(Client &user, std::vector<std::string> const &params)
     change_mode = parse_mode_string(user, channel, params[1], params);
     change_mode_str = change_channel_mode(channel, change_mode);
     if (!change_mode_str.empty())
-        send_message_to_targets(user, info["command"], info["channel"] + ' ' + change_mode_str, channel->get_client_nicks());
+        send_message(user.nickname, channel, create_message(user.nickname, info["command"], info["channel"] + ' ' + change_mode_str));
 }
 
 bool App::mode_str_has_enough_params(std::string const &mode_str, size_t param_count)
@@ -866,6 +894,16 @@ std::string App::change_channel_mode(Channel *channel, chan_mode_set_t const &ne
     return (add.empty() ? add : '+' + add) + (rm.empty() ? rm : '-' + rm) + add_params + rm_params;
 }
 
+// ============================
+//   Client Related Functions
+// ============================
+
+void App::ping(Client &user, std::vector<std::string> const &params)
+{
+    std::string msg = ':' + server_name + " PONG " + server_name + ' ' + (params.empty() ? "" : params[0]);
+    send_message(user, msg);
+}
+
 
 // ============================
 //         Execution
@@ -882,8 +920,10 @@ void App::execute_message(Client &user, Message const &msg)
     {
         if (i->name == msg.command)
         {
-            (this->*(i->cmd_func))(user, msg.params);
-            return;
+            if (i->cmd_func)
+                return (this->*(i->cmd_func))(user, msg.params);
+            else
+                return ;
         }
     }
     info["command"] = msg.command;
@@ -903,6 +943,9 @@ int App::parse_message(Client &user, std::string const &msg_string, Message &msg
 {
     std::istringstream msg_stream(msg_string);
     std::string param;
+
+    if (!msg.params.empty())
+        msg.params.clear();
 
     if (msg_stream.peek() == ':')
     {

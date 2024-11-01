@@ -620,6 +620,8 @@ void App::mode(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
     
     info["channel"] = params[0];
+    if (info["channel"] == user.nickname)
+        return ;
     channel_it = channels.find(info["channel"]);
     if (channel_it == channels.end())
         return send_numeric_reply(user, ERR_NOSUCHCHANNEL, info);

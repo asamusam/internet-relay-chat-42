@@ -708,10 +708,7 @@ chan_mode_set_t App::parse_mode_string(Client const &user, Channel const *channe
     for (std::string::const_iterator ch = mode_str.begin(); ch < mode_str.end(); ch++)
     {
         if (*ch == '+' || *ch == '-')
-        {
             sign = *ch;
-            continue;
-        }
         else
         {
             bool unknown = true;
@@ -721,32 +718,32 @@ chan_mode_set_t App::parse_mode_string(Client const &user, Channel const *channe
                 {
                     switch (Channel::supported_modes[i].mode_type)
                     {
-                        case 'b':
-                            target = find_client_by_nick(params[index]);
-                            info["nick"] = params[index++];
-                            if (!target)
-                                send_numeric_reply(user, ERR_NOSUCHNICK, info);
-                            else if (!channel->is_on_channel(target->nickname))
-                                send_numeric_reply(user, ERR_NOTONCHANNEL, info);
-                            else
-                                parse_type_b_mode(mode_set, Channel::supported_modes[i].mode, sign, target->nickname);
-                            break;
-                        
-                        case 'c':
-                            if (*ch == 'k' && sign == '+' && mode_set.mode & CHANNEL_KEY)
-                                send_numeric_reply(user, ERR_KEYSET, info);
-                            else
-                                parse_type_c_mode(mode_set, Channel::supported_modes[i].mode, sign, params[index]);
-                            if (sign == '+')
-                                ++index;
-                            break;
-                        
-                        case 'd':
-                            parse_type_d_mode(mode_set, Channel::supported_modes[i].mode, sign);
-                            break;
-                        
-                        default:
-                            break;                    
+                    case 'b':
+                        target = find_client_by_nick(params[index]);
+                        info["nick"] = params[index++];
+                        if (!target)
+                            send_numeric_reply(user, ERR_NOSUCHNICK, info);
+                        else if (!channel->is_on_channel(target->nickname))
+                            send_numeric_reply(user, ERR_NOTONCHANNEL, info);
+                        else
+                            parse_type_b_mode(mode_set, Channel::supported_modes[i].mode, sign, target->nickname);
+                        break;
+                    
+                    case 'c':
+                        if (*ch == 'k' && sign == '+' && mode_set.mode & CHANNEL_KEY)
+                            send_numeric_reply(user, ERR_KEYSET, info);
+                        else
+                            parse_type_c_mode(mode_set, Channel::supported_modes[i].mode, sign, params[index]);
+                        if (sign == '+')
+                            ++index;
+                        break;
+                    
+                    case 'd':
+                        parse_type_d_mode(mode_set, Channel::supported_modes[i].mode, sign);
+                        break;
+                    
+                    default:
+                        break;                    
                     }
                     unknown = false;
                     break;

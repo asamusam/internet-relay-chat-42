@@ -195,7 +195,7 @@ void App::fill_placeholders(std::string &str, std::map<std::string, std::string>
         if (it != info.end())
             str.replace(start_pos, end_pos - start_pos + 1, it->second);
         else
-            break ;
+            str.replace(start_pos, end_pos - start_pos + 1, "");
     }
 }
 
@@ -208,14 +208,6 @@ void App::send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::m
     fill_placeholders(reply_text, info);
     msg = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + reply_text;
     send_message(client, msg);
-}
-
-void App::send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::string const &msg) const
-{
-    std::string reply;
-
-    reply = ':' + this->server_name + ' ' + int_to_string(code) + ' ' + msg;
-    send_message(client, reply);
 }
 
 
@@ -688,7 +680,10 @@ void App::mode(Client &user, std::vector<std::string> const &params)
 
     // inform about the current channel mode
     if (params.size() < 2)
-        return send_numeric_reply(user, RPL_CHANNELMODEIS, channel->get_mode_string(user.nickname));
+    {
+        channel->get_mode_with_params(user.nickname, info);
+        return send_numeric_reply(user, RPL_CHANNELMODEIS, info);
+    }
     
     // change the channel mode
     if (!channel->is_channel_operator(user.nickname))

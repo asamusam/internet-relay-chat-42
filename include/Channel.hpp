@@ -65,7 +65,7 @@ class Channel
 
         unsigned short get_mode(void) const;
         void set_mode(unsigned short mode);
-        std::string get_mode_string(std::string const &nick) const;
+        void get_mode_with_params(std::string const &nick, std::map<std::string, std::string> &info) const;
 
         std::string get_type_c_param(chan_mode_enum mode) const;
         void set_type_c_param(chan_mode_enum mode, std::string const &value);

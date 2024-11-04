@@ -184,35 +184,29 @@ void Channel::remove_type_b_param(chan_mode_enum mode, std::string const &value)
     type_b_params[mode].erase(it);
 }
 
-std::string Channel::get_mode_string(std::string const &nick) const
+void Channel::get_mode_with_params(std::string const &nick, std::map<std::string, std::string> &info) const
 {
     std::string mode_string("+");
     std::string params;
     size_t arr_size;
 
+    info["mode"] = "+";
+    info["mode params"];
     arr_size = sizeof(supported_modes) / sizeof(chan_mode_map_t);
     for (size_t i = 0; i < arr_size; i++)
     {
         if (this->mode & supported_modes[i].mode)
         {
-            mode_string += supported_modes[i].mode_char;
-            switch (supported_modes[i].mode)
+            info["mode"] += supported_modes[i].mode_char;
+            if (supported_modes[i].mode_type == 'c')
             {
-            case CHANNEL_KEY:
-                if (this->is_channel_operator(nick))
-                    params += ' ' + this->get_key();
-                break;
-            case USER_LIMIT:
-                params += ' ' + this->user_limit;
-            
-            default:
-                break;
+                if (supported_modes[i].mode == CHANNEL_KEY && !this->is_channel_operator(nick))
+                    continue;
+                info["mode params"] += this->get_type_c_param(supported_modes[i].mode) + ' ';
             }
         }
     }
-    return mode_string + params;
 }
-
 
 std::string Channel::get_key(void) const
 {

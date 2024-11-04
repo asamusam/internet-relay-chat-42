@@ -117,7 +117,7 @@ static std::string int_to_string(int number)
     return ss.str();
 }
 
-static std::string create_message(std::string const &prefix, std::string const &cmd, std::string const &msg)
+std::string App::create_message(std::string const &prefix, std::string const &cmd, std::string const &msg)
 {
     return ':' + prefix + ' ' + cmd + ' ' + msg;
 }
@@ -147,7 +147,7 @@ Client *App::find_client_by_fd(int fd) const
 //       Sending messages
 // ============================
 
-void App::send_message(Client const &client, std::string const &message) const
+void App::send_message(Client const &client, std::string const &message)
 {
     std::string crlf_msg;
 
@@ -156,53 +156,22 @@ void App::send_message(Client const &client, std::string const &message) const
 	send(client.fd, crlf_msg.c_str(), crlf_msg.size(), 0);
 }
 
-void App::send_message(std::string const &user, Channel *channel, std::string const &msg) const
+void App::notify_channel(Channel *channel, std::string const &source, std::string const &cmd, std::string const &param) const
 {
+    std::string msg;
     std::vector<std::string> targets;
-    Client *recipient;
-
+    Client *target;
+    
+    msg = create_message(source, cmd, channel->name + ' ' + param);
     targets = channel->get_client_nicks();
     for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
     {
-        if (*i == user)
-            continue;
-        recipient = find_client_by_nick(*i);
-        if (recipient)
-            send_message(*recipient, msg);
+        target = find_client_by_nick(*i);
+        if (target)
+            send_message(*target, msg);
     }
 }
 
-void App::send_message_to_targets(Client const &user, std::string const &cmd, std::string const &msg, std::vector<std::string> const &targets) const
-{
-    Client *recipient;
-    std::map<std::string, Channel *>::const_iterator channel;
-    std::string message;
-    std::map<std::string, std::string> info;
-
-    for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
-    {
-        message = create_message(user.nickname, cmd, *i + ' ' + msg);
-        recipient = find_client_by_nick(*i);
-        if (recipient && recipient->is_registered)
-            send_message(*recipient, message);
-        else
-        {
-            channel = channels.find(*i);
-            if (channel == channels.end())
-            {
-                info["nick"] = *i;
-                send_numeric_reply(user, ERR_NOSUCHNICK, info);
-            }
-            else if (!channel->second->is_on_channel(user.nickname))
-            {
-                info["channel"] = *i;
-                send_numeric_reply(user, ERR_NOTONCHANNEL, info);
-            }
-            else
-                send_message(user.nickname, channel->second, message);
-        }
-    }    
-}
 
 // ============================
 //      Numeric replies
@@ -445,7 +414,7 @@ void App::join(Client &user, std::vector<std::string> const &params)
         this->channels[channel->name] = channel;
     }
     channel->add_client(user.nickname);
-    send_message(user.nickname, channel, create_message(user.nickname, info["command"], info["channel"]));
+    notify_channel(channel, user.nickname, info["command"], "");
     info["topic"] = channel->get_topic();
     info["nicks"] = channel->get_client_nicks_str();
     if (!info["topic"].empty())
@@ -503,7 +472,66 @@ void App::privmsg(Client &user, std::vector<std::string> const &params)
     else if (split_targets(target, targets) == -1)
         return send_numeric_reply(user, ERR_TOOMANYTARGETS, info);
 
-    send_message_to_targets(user, info["command"], params[1], targets);
+    send_privmsg(user, params[1], targets);
+}
+
+void App::send_privmsg(Client const &user, std::string const &msg, std::vector<std::string> const &targets) const
+{
+    Client *client;
+    std::map<std::string, Channel *>::const_iterator channel_it;
+    std::map<std::string, std::string> info;
+
+    for (std::vector<std::string>::const_iterator target = targets.begin(); target < targets.end(); target++)
+    {
+        client = find_client_by_nick(*target);
+        if (client && client->is_registered)
+            privmsg_client(client, user.nickname, msg);
+        else
+        {
+            channel_it = channels.find(*target);
+            if (channel_it == channels.end())
+            {
+                info["nick"] = *target;
+                send_numeric_reply(user, ERR_NOSUCHNICK, info);
+            }
+            else if (!channel_it->second->is_on_channel(user.nickname))
+            {
+                info["channel"] = *target;
+                send_numeric_reply(user, ERR_NOTONCHANNEL, info);
+            }
+            else
+                privmsg_channel(channel_it->second, user.nickname, msg);
+        }
+    }    
+}
+
+void App::privmsg_channel(Channel *channel, std::string const &source, std::string const &msg) const
+{
+    std::string message;
+    std::vector<std::string> targets;
+    Client *target;
+    
+    message = create_message(source, "PRIVMSG", channel->name + ' ' + msg);
+    targets = channel->get_client_nicks();
+    for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
+    {
+        if (*i == source)
+            continue;
+        target = find_client_by_nick(*i);
+        if (target)
+            send_message(*target, message);
+    }
+}
+
+void App::privmsg_client(Client *client, std::string const &source, std::string const &msg) const
+{
+    std::string message;
+    
+    if (client->nickname == source)
+        return;
+    
+    message = create_message(source, "PRIVMSG", client->nickname + ' ' + msg);
+    send_message(*client, message);
 }
 
 
@@ -535,7 +563,7 @@ void App::kick(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     if (!channel_it->second->is_on_channel(info["user"]))
         return send_numeric_reply(user, ERR_USERNOTINCHANNEL, info);
-    send_message(user.nickname, channel_it->second, create_message(user.nickname, info["command"], info["channel"] + ' ' + info["user"]));
+    notify_channel(channel_it->second, user.nickname, info["command"], info["user"]);
     channel_it->second->remove_client(info["user"]);
     if (channel_it->second->get_client_count() == 0)
     {
@@ -624,7 +652,7 @@ void App::topic(Client &user, std::vector<std::string> const &params)
         channel_it->second->set_topic("");
     else
         channel_it->second->set_topic(info["topic"]);
-    send_message(user.nickname, channel_it->second, create_message(user.nickname, info["command"], info["channel"] + ' ' + info["topic"]));
+    notify_channel(channel_it->second, user.nickname, info["command"], info["topic"]);
 }
 
 
@@ -675,7 +703,7 @@ void App::mode(Client &user, std::vector<std::string> const &params)
     change_mode = parse_mode_string(user, channel, params[1], params);
     change_mode_str = change_channel_mode(channel, change_mode);
     if (!change_mode_str.empty())
-        send_message(user.nickname, channel, create_message(user.nickname, info["command"], info["channel"] + ' ' + change_mode_str));
+        notify_channel(channel, user.nickname, info["command"], change_mode_str);
 }
 
 bool App::mode_str_has_enough_params(std::string const &mode_str, size_t param_count)

@@ -72,9 +72,9 @@ class App
         void send_numeric_reply(Client const &client, IRCReplyCodeEnum code, std::string const &msg) const;
         void fill_placeholders(std::string &str, std::map<std::string, std::string> const &info) const;
 
-        void send_message(Client const &user, std::string const &msg) const;
-        void send_message(std::string const &user, Channel *channel, std::string const &msg) const;
-        void send_message_to_targets(Client const &user, std::string const &cmd, std::string const &msg, std::vector<std::string> const &targets) const;
+        static std::string create_message(std::string const &prefix, std::string const &cmd, std::string const &msg);
+        static void send_message(Client const &user, std::string const &msg);
+        void notify_channel(Channel *channel, std::string const &source, std::string const &cmd, std::string const &param) const;
 
         void free_clients(void);
         void free_channels(void);
@@ -86,6 +86,10 @@ class App
         static void parse_type_d_mode(chan_mode_set_t &mode_set, chan_mode_enum mode, char sign);
         chan_mode_set_t parse_mode_string(Client const &user, Channel const *channel, std::string const &mode_str, std::vector<std::string> const &params) const;
         std::string change_channel_mode(Channel *channel, chan_mode_set_t const &channel_mode_set);
+        
+        void send_privmsg(Client const &user, std::string const &msg, std::vector<std::string> const &targets) const;
+        void privmsg_channel(Channel *channel, std::string const &source, std::string const &msg) const;
+        void privmsg_client(Client *client, std::string const &source, std::string const &msg) const;
 };
 
 #endif // APP_HPP

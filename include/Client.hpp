@@ -11,6 +11,7 @@ struct Client
     bool has_valid_pwd;
     std::string username;
     std::string nickname;
+    std::string full_nickname;
 	std::string msg_buff;
     int num_channels;
 };

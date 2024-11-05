@@ -272,6 +272,7 @@ void App::nick(Client &user, std::vector<std::string> const &params)
     if (!user.is_registered && !user.username.empty())
     {
         user.is_registered = true;
+        user.full_nickname = user.nickname + '!' + user.username + '@' + this->server_name;
         info["network"] = "42 London";
         info["client"] = user.nickname;
         send_numeric_reply(user, RPL_WELCOME, info);
@@ -339,6 +340,7 @@ void App::user(Client &user, std::vector<std::string> const &params)
     if (!user.nickname.empty())
     {
         user.is_registered = true;
+        user.full_nickname = user.nickname + '!' + user.username + '@' + this->server_name;
         info["nick"] = user.nickname;
         info["network"] = "42 London";
         info["client"] = user.nickname;
@@ -406,7 +408,7 @@ void App::join(Client &user, std::vector<std::string> const &params)
         this->channels[channel->name] = channel;
     }
     channel->add_client(user.nickname);
-    notify_channel(channel, user.nickname, info["command"], "");
+    notify_channel(channel, user.full_nickname, info["command"], "");
     info["topic"] = channel->get_topic();
     info["nicks"] = channel->get_client_nicks_str();
     if (info["topic"] != ":")
@@ -555,7 +557,7 @@ void App::kick(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     if (!channel_it->second->is_on_channel(info["user"]))
         return send_numeric_reply(user, ERR_USERNOTINCHANNEL, info);
-    notify_channel(channel_it->second, user.nickname, info["command"], info["user"]);
+    notify_channel(channel_it->second, user.full_nickname, info["command"], info["user"]);
     channel_it->second->remove_client(info["user"]);
     if (channel_it->second->get_client_count() == 0)
     {
@@ -641,7 +643,7 @@ void App::topic(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     info["topic"] = params[1];
         channel_it->second->set_topic(info["topic"]);
-    notify_channel(channel_it->second, user.nickname, info["command"], info["topic"]);
+    notify_channel(channel_it->second, user.full_nickname, info["command"], info["topic"]);
 }
 
 
@@ -695,7 +697,7 @@ void App::mode(Client &user, std::vector<std::string> const &params)
     change_mode = parse_mode_string(user, channel, params[1], params);
     change_mode_str = change_channel_mode(channel, change_mode);
     if (!change_mode_str.empty())
-        notify_channel(channel, user.nickname, info["command"], change_mode_str);
+        notify_channel(channel, user.full_nickname, info["command"], change_mode_str);
 }
 
 bool App::mode_str_has_enough_params(std::string const &mode_str, size_t param_count)

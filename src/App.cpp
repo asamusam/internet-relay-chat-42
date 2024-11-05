@@ -612,7 +612,7 @@ void App::invite(Client &user, std::vector<std::string> const &params)
     if (channel->is_on_channel(info["nick"]))
         return send_numeric_reply(user, ERR_USERONCHANNEL, info);
     channel->add_invitation(info["nick"]);
-    invitation_msg = ':' + user.nickname + " INVITE " + info["nick"] + ' ' + info["channel"];
+    invitation_msg = create_message(user.full_nickname, info["command"], info["nick"] + ' ' + info["channel"]);
     send_message(*recipient, invitation_msg);
     send_numeric_reply(user, RPL_INVITING, info);
 }

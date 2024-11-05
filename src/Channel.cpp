@@ -16,6 +16,7 @@ Channel::Channel(std::string const &name)
 {
     this->name = name;
     this->mode = 0;
+    this->topic = ":";
     user_limit = std::numeric_limits<unsigned int>::max();
 }
 

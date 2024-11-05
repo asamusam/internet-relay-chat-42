@@ -409,7 +409,7 @@ void App::join(Client &user, std::vector<std::string> const &params)
     notify_channel(channel, user.nickname, info["command"], "");
     info["topic"] = channel->get_topic();
     info["nicks"] = channel->get_client_nicks_str();
-    if (!info["topic"].empty())
+    if (info["topic"] != ":")
         send_numeric_reply(user, RPL_TOPIC, info);
     send_numeric_reply(user, RPL_NAMREPLY, info);
 }
@@ -632,7 +632,7 @@ void App::topic(Client &user, std::vector<std::string> const &params)
     if (params.size() == 1)
     {
         info["topic"] = channel_it->second->get_topic();
-        if (info["topic"].empty())
+        if (info["topic"] == ":")
             return send_numeric_reply(user, RPL_NOTOPIC, info);
         else
             return send_numeric_reply(user, RPL_TOPIC, info);
@@ -640,9 +640,6 @@ void App::topic(Client &user, std::vector<std::string> const &params)
     if (channel_it->second->is_in_mode(TOPIC_LOCK) && !channel_it->second->is_channel_operator(user.nickname))
         return send_numeric_reply(user, ERR_CHANOPRIVSNEEDED, info);
     info["topic"] = params[1];
-    if (info["topic"] == ":")
-        channel_it->second->set_topic("");
-    else
         channel_it->second->set_topic(info["topic"]);
     notify_channel(channel_it->second, user.nickname, info["command"], info["topic"]);
 }
@@ -986,7 +983,7 @@ int App::parse_message(Client &user, std::string const &msg_string, Message &msg
     {
         if (msg_stream.peek() == ':')
         {
-            msg_stream.ignore(1);
+            // msg_stream.ignore(1);
             std::getline(msg_stream, param);
         }
         else

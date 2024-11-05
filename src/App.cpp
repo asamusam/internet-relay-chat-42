@@ -413,6 +413,8 @@ void App::join(Client &user, std::vector<std::string> const &params)
     info["nicks"] = channel->get_client_nicks_str();
     if (info["topic"] != ":")
         send_numeric_reply(user, RPL_TOPIC, info);
+    info["symbol"] = "=";
+    info["client"] = user.nickname;
     send_numeric_reply(user, RPL_NAMREPLY, info);
 }
 

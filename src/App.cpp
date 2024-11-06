@@ -162,7 +162,7 @@ void App::send_message(Client const &client, std::string const &message)
     std::string crlf_msg;
 
     crlf_msg = message + CRLF;
-	std::cout << "Send msg to uuid:" << client.uuid << " ->" << message << "\n";
+	std::cout << "SEND msg to uuid:" << client.uuid << " ->" << message << "\n";
 	send(client.fd, crlf_msg.c_str(), crlf_msg.size(), 0);
 }
 

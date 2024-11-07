@@ -91,8 +91,8 @@ class App
         std::string change_channel_mode(Channel *channel, chan_mode_set_t const &channel_mode_set);
         
         void send_privmsg(Client const &user, std::string const &msg, std::vector<std::string> const &targets) const;
-        void privmsg_channel(Channel *channel, std::string const &source, std::string const &msg) const;
-        void privmsg_client(Client *client, std::string const &source, std::string const &msg) const;
+        void privmsg_channel(Channel *channel, Client const &user, std::string const &msg) const;
+        void privmsg_client(Client *client, Client const &user, std::string const &msg) const;
 };
 
 #endif // APP_HPP

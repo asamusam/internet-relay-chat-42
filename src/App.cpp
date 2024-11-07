@@ -509,12 +509,12 @@ void App::send_privmsg(Client const &user, std::string const &msg, std::vector<s
     {
         client = find_client_by_nick(*target);
         if (client && client->is_registered)
-            privmsg_client(client, user.nickname, msg);
+            privmsg_client(client, user, msg);
         else
         {
             channel = find_channel_by_name(*target);
             if (channel && channel->is_on_channel(user.nickname))
-                privmsg_channel(channel, user.nickname, msg);
+                privmsg_channel(channel, user, msg);
             else if (channel)
             {
                 info["channel"] = *target;
@@ -529,17 +529,17 @@ void App::send_privmsg(Client const &user, std::string const &msg, std::vector<s
     }    
 }
 
-void App::privmsg_channel(Channel *channel, std::string const &source, std::string const &msg) const
+void App::privmsg_channel(Channel *channel, Client const &user, std::string const &msg) const
 {
     std::string message;
     std::vector<std::string> targets;
     Client *target;
     
-    message = create_message(source, "PRIVMSG", channel->name + ' ' + msg);
+    message = create_message(user.full_nickname, "PRIVMSG", channel->name + ' ' + msg);
     targets = channel->get_client_nicks();
     for (std::vector<std::string>::const_iterator i = targets.begin(); i < targets.end(); i++)
     {
-        if (*i == source)
+        if (*i == user.nickname)
             continue;
         target = find_client_by_nick(*i);
         if (target)
@@ -547,14 +547,14 @@ void App::privmsg_channel(Channel *channel, std::string const &source, std::stri
     }
 }
 
-void App::privmsg_client(Client *client, std::string const &source, std::string const &msg) const
+void App::privmsg_client(Client *client, Client const &user, std::string const &msg) const
 {
     std::string message;
     
-    if (client->nickname == source)
+    if (client->nickname == user.nickname)
         return;
     
-    message = create_message(source, "PRIVMSG", client->nickname + ' ' + msg);
+    message = create_message(user.full_nickname, "PRIVMSG", client->nickname + ' ' + msg);
     send_message(*client, message);
 }
 

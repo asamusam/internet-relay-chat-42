@@ -19,7 +19,7 @@ int parse_port(char *s);
 int listen_sock_init(int port);
 int epoll_init(int listen_sock_fd);
 void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd);
-void close_conn(App &app, int fd);
+void close_conn_by_fd(App &app, int fd);
 void handle_msg(App &app, Client *client);
 void setup_signal_handlers(void);
 

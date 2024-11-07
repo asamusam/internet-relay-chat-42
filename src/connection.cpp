@@ -197,12 +197,21 @@ void handle_msg(App &app, Client *client)
 	while (crlf_indx != msg.npos);
 }
 
-void close_conn(App &app, int fd)
+void close_conn_by_fd(App &app, int fd)
 {
 	Client *client = app.find_client_by_fd(fd);
 	handle_msg(app, client);
 	close(fd);
 	std::cout << "Peer with uuid:" << client->uuid << " closed the connection.\n";
+	app.remove_client(client->uuid);
+}
+
+void close_conn_by_uuid(App &app, uint32 uuid)
+{
+	Client *client = app.get_client(uuid);
+	handle_msg(app, client);
+	close(client->fd);
+	std::cout << "Closed connection to peer with uuid:" << client->uuid << ".\n";
 	app.remove_client(client->uuid);
 }
 

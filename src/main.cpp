@@ -52,7 +52,7 @@ void conn_loop(App &app, int listen_sock_fd)
 				if (fd == listen_sock_fd)
 					accept_in_conns(app, epoll_fd, listen_sock_fd);
 				else if (is_hup)
-					close_conn(app, fd);
+					close_conn_by_fd(app, fd);
                 #ifdef __APPLE__
                 else if (filter == EVFILT_READ)
                     handle_msg(app, app.find_client_by_fd(fd));

@@ -65,6 +65,7 @@ class App
         bool is_valid_nick(std::string const &nickname) const;
         bool is_valid_channel_name(std::string const &channel_name) const;
 
+		Client *get_client(uint32 uuid) const;
         Client *find_client_by_nick(std::string const &nick) const;
         Client *find_client_by_fd(int fd) const;
 		uint32 generate_uuid(void) const;

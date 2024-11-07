@@ -1,10 +1,8 @@
 #include "App.hpp"
 
 #include <iostream>
-#include <limits>
 #include <sstream>
 #include <algorithm>
-#include <set>
 #include <sys/socket.h>
 
 // ============================
@@ -68,6 +66,17 @@ void App::remove_client(int uuid)
         return ;
     delete it->second;
     clients.erase(uuid);
+}
+
+Client *App::get_client(uint32 uuid) const
+{
+	std::map<uint32, Client *>::const_iterator it;		
+	
+	it = clients.find(uuid);
+	
+	if (it == clients.end())
+		return (NULL);
+	return (it->second);
 }
 
 Client *App::find_client_by_nick(std::string const &nick) const

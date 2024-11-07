@@ -1,4 +1,6 @@
+#include <cstdlib>
 #include <cerrno>
+#include <signal.h>
 #include <cstring>
 #include <iostream>
 #include <limits>
@@ -202,4 +204,26 @@ void close_conn(App &app, int fd)
 	close(fd);
 	std::cout << "Peer with uuid:" << client->uuid << " closed the connection.\n";
 	app.remove_client(client->uuid);
+}
+
+static void signal_handler(int sig)
+{
+	if (sig == SIGQUIT || sig == SIGINT)
+	{
+		//TODO clean. pass App as global variable.
+		std::exit(0);
+	}
+}
+
+void setup_signal_handlers(void)
+{
+	struct sigaction sa;
+	std::memset(&sa, 0, sizeof(sa));
+
+	sa.sa_handler = &signal_handler;
+
+	if (-1 == sigaction(SIGINT, &sa, NULL))
+		throw(SCEM_SIGACT);
+	if (-1 == sigaction(SIGQUIT, &sa, NULL))
+		throw(SCEM_SIGACT);
 }

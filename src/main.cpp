@@ -82,6 +82,7 @@ int main(int argc, char **argv)
 {
 	try
 	{
+		setup_signal_handlers();
 		if (argc != 3)
 			throw (IEC_BADARGC);
 

@@ -12,7 +12,8 @@ std::pair<scem_function, std::string> sf_data[] = {
 	std::make_pair(SCEM_EPOLL_WAIT,   "epoll_wait()"),
 	std::make_pair(SCEM_LISTEN,       "listen()"),
 	std::make_pair(SCEM_RECV,         "recv()"),
-	std::make_pair(SCEM_SOCKET,       "socket()")
+	std::make_pair(SCEM_SOCKET,       "socket()"),
+	std::make_pair(SCEM_SIGACT,       "sigaction()")
 };
 
 std::map<scem_function, std::string> SystemCallErrorMessage::error_function(sf_data, sf_data + sizeof sf_data / sizeof sf_data[0]);

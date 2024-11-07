@@ -266,7 +266,7 @@ void App::nick(Client &user, std::vector<std::string> const &params)
 {
     std::map<std::string, std::string> info;
 
-    info["client"] = user.full_nickname;
+    info["client"] = user.nickname;
     if (!user.has_valid_pwd)
         return send_numeric_reply(user, ERR_PASSWDMISMATCH, info);
     if (params.empty())
@@ -328,7 +328,7 @@ void App::user(Client &user, std::vector<std::string> const &params)
     std::map<std::string, std::string> info;
     std::string username;
 
-    info["client"] = user.full_nickname;
+    info["client"] = user.nickname;
     info["command"] = "USER";
     if (user.is_registered)
         return send_numeric_reply(user, ERR_ALREADYREGISTERED, info);

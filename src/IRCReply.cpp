@@ -27,12 +27,12 @@ std::pair<IRCReplyCodeEnum, std::string> reply_data[] = {
     std::make_pair(ERR_KEYSET,            "<client> <channel> :Channel key already set"),
     std::make_pair(ERR_UNKNOWNMODE,       "<client> <char> :is unknown mode char to me for <channel>"),
     std::make_pair(ERR_USERSDONTMATCH,    "<client> :Cannot change mode for other users"),
-    std::make_pair(RPL_TOPIC,             "<client> <channel> : <topic>"),
+    std::make_pair(RPL_TOPIC,             "<client> <channel> <topic>"),
     std::make_pair(RPL_NAMREPLY,          "<client> <symbol> <channel> :<nicks>"),
     std::make_pair(RPL_INVITING,          "<client> <nick> <channel>"),
     std::make_pair(RPL_CHANNELMODEIS,     "<client> <channel> <mode> <mode params>"),
     std::make_pair(RPL_NOTOPIC,           "<client> <channel> :No topic is set"),
-    std::make_pair(RPL_WELCOME,           "<client> <nick> :Welcome to <network>, <nick>")
+    std::make_pair(RPL_WELCOME,           "<nick> :Welcome to <network>, <nick>")
 };
 
 std::map<IRCReplyCodeEnum, std::string> IRCReply::reply_messages(reply_data, reply_data + sizeof reply_data / sizeof reply_data[0]);

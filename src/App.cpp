@@ -238,13 +238,12 @@ void App::pass(Client &user, std::vector<std::string> const &params)
 {
     std::map<std::string, std::string> info;
 
+    info["client"] = user.full_nickname;
+    info["command"] = "PASS";
     if (user.is_registered)
-        return send_numeric_reply(user, ERR_ALREADYREGISTRED, info);
+        return send_numeric_reply(user, ERR_ALREADYREGISTERED, info);
     if (params.empty())
-    {
-        info["command"] = "PASS";
         return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
-    }
     if (params[0] != this->server_password)
     {
         if (user.has_valid_pwd)
@@ -266,25 +265,23 @@ the server just sends back ERR_NICKNAMEINUSE reply.
 void App::nick(Client &user, std::vector<std::string> const &params)
 {
     std::map<std::string, std::string> info;
-    std::string nickname;
 
+    info["client"] = user.full_nickname;
     if (!user.has_valid_pwd)
         return send_numeric_reply(user, ERR_PASSWDMISMATCH, info);
     if (params.empty())
         return send_numeric_reply(user, ERR_NONICKNAMEGIVEN, info);
-    nickname = params[0];
-    info["nick"] = nickname;
-    if (!is_valid_nick(nickname))
+    info["nick"] = params[0];
+    if (!is_valid_nick(info["nick"]))
         return send_numeric_reply(user, ERR_ERRONEUSNICKNAME, info);
-    if (find_client_by_nick(nickname))
+    if (find_client_by_nick(info["nick"]))
         return send_numeric_reply(user, ERR_NICKNAMEINUSE, info);
-    user.nickname = nickname;
+    user.nickname = info["nick"];
     if (!user.is_registered && !user.username.empty())
     {
         user.is_registered = true;
         user.full_nickname = user.nickname + '!' + user.username + '@' + this->server_name;
         info["network"] = "42 London";
-        info["client"] = user.nickname;
         send_numeric_reply(user, RPL_WELCOME, info);
     }
 }
@@ -331,15 +328,14 @@ void App::user(Client &user, std::vector<std::string> const &params)
     std::map<std::string, std::string> info;
     std::string username;
 
+    info["client"] = user.full_nickname;
+    info["command"] = "USER";
     if (user.is_registered)
-        return send_numeric_reply(user, ERR_ALREADYREGISTRED, info);
+        return send_numeric_reply(user, ERR_ALREADYREGISTERED, info);
     if (!user.has_valid_pwd)
         return send_numeric_reply(user, ERR_PASSWDMISMATCH, info);
     if (params.empty())
-    {
-        info["command"] = "USER";
         return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
-    }
     username = params[0];
     if (username.find(' ') != username.npos)
         return ;
@@ -353,7 +349,6 @@ void App::user(Client &user, std::vector<std::string> const &params)
         user.full_nickname = user.nickname + '!' + user.username + '@' + this->server_name;
         info["nick"] = user.nickname;
         info["network"] = "42 London";
-        info["client"] = user.nickname;
         send_numeric_reply(user, RPL_WELCOME, info);
         // send_numeric_reply(user, RPL_YOURHOST, info);
         // send_numeric_reply(user, RPL_CREATED, info);
@@ -376,21 +371,20 @@ void App::join(Client &user, std::vector<std::string> const &params)
 {
     std::map<std::string, std::string> info;
     Channel *channel;
-    std::string channel_name;
 
     if (!user.is_registered)
         return ;
+    info["client"] = user.full_nickname;
     info["command"] = "JOIN";
     if (params.empty())
         return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
     if (params[0].length() > 200)
-        channel_name = channel_name.substr(0, 200);
+        info["channel"] = params[0].substr(0, 200);
     else
-        channel_name = params[0];
-    info["channel"] = channel_name;
+        info["channel"] = params[0];
     if (user.num_channels == this->client_channel_limit)
         return send_numeric_reply(user, ERR_TOOMANYCHANNELS, info);
-    channel = find_channel_by_name(channel_name);
+    channel = find_channel_by_name(info["channel"]);
     if (channel)
     {
         if (channel->is_on_channel(user.nickname))
@@ -409,9 +403,9 @@ void App::join(Client &user, std::vector<std::string> const &params)
     }
     else
     {
-        if (!is_valid_channel_name(channel_name))
+        if (!is_valid_channel_name(info["channel"]))
             return send_numeric_reply(user, ERR_BADCHANMASK, info);
-        channel = new Channel(channel_name);
+        channel = new Channel(info["channel"]);
         channel->add_type_b_param(CHAN_OP, user.nickname);
         this->channels[channel->name] = channel;
     }
@@ -422,7 +416,6 @@ void App::join(Client &user, std::vector<std::string> const &params)
     if (info["topic"] != ":")
         send_numeric_reply(user, RPL_TOPIC, info);
     info["symbol"] = "=";
-    info["client"] = user.nickname;
     send_numeric_reply(user, RPL_NAMREPLY, info);
 }
 
@@ -464,6 +457,7 @@ void App::privmsg(Client &user, std::vector<std::string> const &params)
 
     if (!user.is_registered)
         return ;
+    info["client"] = user.full_nickname;
     info["command"] = "PRIVMSG";
     if (params.empty())
         return send_numeric_reply(user, ERR_NORECIPIENT, info);
@@ -553,6 +547,7 @@ void App::kick(Client &user, std::vector<std::string> const &params)
 
     if (!user.is_registered)
         return ;
+    info["client"] = user.full_nickname;
     info["command"] = "KICK";
     if (params.size() < 2)
         return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
@@ -593,6 +588,7 @@ void App::invite(Client &user, std::vector<std::string> const &params)
 
     if (!user.is_registered)
         return ;
+    info["client"] = user.full_nickname;
     info["command"] = "INVITE";
     if (params.size() < 2)
         return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
@@ -632,6 +628,7 @@ void App::topic(Client &user, std::vector<std::string> const &params)
     
     if (!user.is_registered)
         return ;
+    info["client"] = user.full_nickname;
     info["command"] = "TOPIC";
     if (params.empty())
         return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
@@ -671,6 +668,7 @@ void App::mode(Client &user, std::vector<std::string> const &params)
     if (!user.is_registered)
         return ;
 
+    info["client"] = user.full_nickname;
     info["command"] = "MODE";
     if (params.empty())
         return send_numeric_reply(user, ERR_NEEDMOREPARAMS, info);
@@ -759,6 +757,7 @@ chan_mode_set_t App::parse_mode_string(Client const &user, Channel const *channe
     mode_set.mode = channel->get_mode();
     mode_set.type_c_params[CHANNEL_KEY] = channel->get_key();
     mode_set.user_limit = channel->get_user_limit();
+    info["client"] = user.full_nickname;
     info["channel"] = channel->name;
 
     char sign = mode_str[0];
@@ -955,6 +954,7 @@ void App::execute_message(Client &user, Message const &msg)
                 return ;
         }
     }
+    info["client"] = user.full_nickname;
     info["command"] = msg.command;
     send_numeric_reply(user, ERR_UNKNOWNCOMMAND, info);
 }

@@ -3,9 +3,11 @@
 
 #include <string>
 
+typedef unsigned long uint32;
+
 struct Client
 {
-    int uuid;
+    uint32 uuid;
     int fd;
     bool is_registered;
     bool has_valid_pwd;

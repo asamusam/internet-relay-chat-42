@@ -1,6 +1,7 @@
 #include "App.hpp"
 
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <algorithm>
 #include <set>
@@ -38,7 +39,7 @@ App::~App()
 
 void App::free_clients(void)
 {
-    for (std::map<int, Client *>::iterator it = clients.begin(); it != clients.end(); it++)
+    for (std::map<uint32, Client *>::iterator it = clients.begin(); it != clients.end(); it++)
         delete it->second;
 }
 
@@ -60,7 +61,7 @@ void App::add_client(Client *new_client)
 
 void App::remove_client(int uuid)
 {
-    std::map<int, Client *>::iterator it;
+    std::map<uint32, Client *>::iterator it;
 
     it = clients.find(uuid);
     if (it == clients.end())
@@ -71,7 +72,7 @@ void App::remove_client(int uuid)
 
 Client *App::find_client_by_nick(std::string const &nick) const
 {
-    for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
+    for (std::map<uint32, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
     {
         if (i->second->nickname == nick)
             return i->second;
@@ -81,12 +82,28 @@ Client *App::find_client_by_nick(std::string const &nick) const
 
 Client *App::find_client_by_fd(int fd) const
 {
-    for (std::map<int, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
+    for (std::map<uint32, Client *>::const_iterator i = clients.begin(); i != clients.end(); i++)
     {
         if (i->second->fd == fd)
             return i->second;
     }
     return NULL;
+}
+
+/*
+As the upper limit of connections is WELL below MAX_INT there is little chance of conflict.
+ */
+uint32 App::generate_uuid(void) const
+{
+	uint32 candidate;
+
+	for (;;)
+	{
+		srand(time(0));
+		candidate = (uint32) rand();
+		if (clients.count(candidate) == 0)
+			return candidate;
+	}
 }
 
 

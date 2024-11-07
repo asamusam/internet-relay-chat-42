@@ -36,7 +36,7 @@ class App
         std::string server_name;
         std::string server_password;
         std::vector<Command> commands;
-        std::map<int, Client *> clients;
+        std::map<uint32, Client *> clients;
         std::map<std::string, Channel *> channels;
 
     public:
@@ -67,6 +67,7 @@ class App
 
         Client *find_client_by_nick(std::string const &nick) const;
         Client *find_client_by_fd(int fd) const;
+		uint32 generate_uuid(void) const;
 
         Channel *find_channel_by_name(std::string const &channel_name) const;
 

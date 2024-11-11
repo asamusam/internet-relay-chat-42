@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <sys/socket.h>
+#include <ctime>
 
 // ============================
 //   Constructor & Destructor
@@ -11,6 +12,10 @@
 
 App::App(std::string const &name, std::string const &password) : server_name(name), server_password(password)
 {
+    std::time_t result = std::time(NULL);
+    
+    this->server_version = "1.0";
+    this->created_at = std::asctime(std::localtime(&result));
     commands.push_back((Command){"PASS",    &App::pass});
     commands.push_back((Command){"NICK",    &App::nick});
     commands.push_back((Command){"USER",    &App::user});
@@ -115,6 +120,26 @@ uint32 App::generate_uuid(void) const
 	}
 }
 
+void App::register_client(Client &user)
+{
+    std::map<std::string, std::string> info;
+
+    user.is_registered = true;
+    user.full_nickname = user.nickname + '!' + user.username + '@' + this->server_name;
+
+    info["nick"] = user.nickname;
+    info["client"] = user.full_nickname;
+    info["network"] = "42 London";
+    info["servername"] = this->server_name;
+    info["version"] = this->server_version;
+    info["datetime"] = this->created_at;
+
+    send_numeric_reply(user, RPL_WELCOME, info);
+    send_numeric_reply(user, RPL_YOURHOST, info);
+    send_numeric_reply(user, RPL_CREATED, info);
+    // send_numeric_reply(user, RPL_MYINFO, info);
+    // send_numeric_reply(user, ERR_NOMOTD, info);
+}
 
 // ============================
 //          Channels
@@ -304,12 +329,7 @@ void App::nick(Client &user, std::vector<std::string> const &params)
         return send_numeric_reply(user, ERR_NICKNAMEINUSE, info);
     user.nickname = info["nick"];
     if (!user.is_registered && !user.username.empty())
-    {
-        user.is_registered = true;
-        user.full_nickname = user.nickname + '!' + user.username + '@' + this->server_name;
-        info["network"] = "42 London";
-        send_numeric_reply(user, RPL_WELCOME, info);
-    }
+        register_client(user);
 }
 
 /*
@@ -370,19 +390,7 @@ void App::user(Client &user, std::vector<std::string> const &params)
     else
         user.username = username;
     if (!user.nickname.empty())
-    {
-        user.is_registered = true;
-        user.full_nickname = user.nickname + '!' + user.username + '@' + this->server_name;
-        info["nick"] = user.nickname;
-        info["network"] = "42 London";
-        send_numeric_reply(user, RPL_WELCOME, info);
-        // send_numeric_reply(user, RPL_YOURHOST, info);
-        // send_numeric_reply(user, RPL_CREATED, info);
-        // send_numeric_reply(user, RPL_MYINFO, info);
-        // send_numeric_reply(user, ERR_NOMOTD, info);
-    }
-    //std::cout << "New username: " << user.username 
-    //          << (user.is_registered ? "\nRegistration complete." : "") << std::endl;
+        register_client(user);
 }
 
 

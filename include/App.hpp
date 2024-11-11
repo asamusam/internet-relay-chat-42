@@ -35,6 +35,8 @@ class App
     private:
         std::string server_name;
         std::string server_password;
+        std::string server_version;
+        std::string created_at;
         std::vector<Command> commands;
         std::map<uint32, Client *> clients;
         std::map<std::string, Channel *> channels;
@@ -93,6 +95,8 @@ class App
         void send_privmsg(Client const &user, std::string const &msg, std::vector<std::string> const &targets) const;
         void privmsg_channel(Channel *channel, Client const &user, std::string const &msg) const;
         void privmsg_client(Client *client, Client const &user, std::string const &msg) const;
+
+        void register_client(Client &user);
 };
 
 #endif // APP_HPP

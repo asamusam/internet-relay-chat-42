@@ -130,16 +130,11 @@ void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 		throw (SCEM_EPOLL_CTL);
     #endif
 
-	Client *client = new Client;
-	client->uuid = app.generate_uuid();
-	client->fd = conn_sock_fd;
-	client->is_registered = false;
-	client->has_valid_pwd = false;
-	client->num_channels = 0;
+	Client *client = new Client(app, conn_sock_fd);
 	app.add_client(client);
 
-	std::cout << "ACCEPT'ed new connection and created new client with uuid:" << client->uuid << " and fd:"
-		<< client->fd << "\n";
+	std::cout << "ACCEPT'ed new connection and created new client with uuid:" << client->get_uuid() << " and fd:"
+		<< client->get_fd() << "\n";
 }
 
 void handle_msg(App &app, Client *client)
@@ -153,8 +148,8 @@ void handle_msg(App &app, Client *client)
 	do
 	{
 		std::memset(buff, 0, sizeof buff);
-		bytes_read = recv(client->fd, buff, sizeof buff, 0);
-		std::cout << "RECV chars from uuid:" << client->uuid << " ->" << buff << "\n";
+		bytes_read = recv(client->get_fd(), buff, sizeof buff, 0);
+		std::cout << "RECV chars from uuid:" << client->get_uuid() << " ->" << buff << "\n";
 		if (-1 ==  bytes_read)
 			throw (SCEM_RECV);
 		if (0 == bytes_read)
@@ -166,12 +161,12 @@ void handle_msg(App &app, Client *client)
 				|| (crlf_indx != msg.npos && crlf_indx > MAX_MSG_SIZE - 2))
 		{
 			msg.erase(MAX_MSG_SIZE);
-			std::cout << "Completed msg from uuid:" << client->uuid << " ->" << msg << "\n";
+			std::cout << "Completed msg from uuid:" << client->get_uuid() << " ->" << msg << "\n";
 			if (-1 == app.parse_message(*client, msg, message))
-				std::cerr << "Cannot parse message from uuid:" << client->uuid << " ->" << msg << "\n";
+				std::cerr << "Cannot parse message from uuid:" << client->get_uuid() << " ->" << msg << "\n";
 			else
 			{
-				std::cout << "EXEC msg from uuid:" << client->uuid << " ->" << msg << "\n";
+				std::cout << "EXEC msg from uuid:" << client->get_uuid() << " ->" << msg << "\n";
 				app.execute_message(*client, message);
 			}
 			msg.clear();
@@ -181,13 +176,13 @@ void handle_msg(App &app, Client *client)
 		while (not msg.empty() && crlf_indx != msg.npos)
 		{
 			std::string msg_substr = msg.substr(0, crlf_indx);
-			std::cout << "Completed msg from uuid:" << client->uuid << " ->" << msg_substr << "\n";
+			std::cout << "Completed msg from uuid:" << client->get_uuid() << " ->" << msg_substr << "\n";
 
 			if (-1 == app.parse_message(*client, msg_substr, message))
-				std::cerr << "Cannot parse message from uuid:" << client->uuid << " ->" << msg_substr << "\n";
+				std::cerr << "Cannot parse message from uuid:" << client->get_uuid() << " ->" << msg_substr << "\n";
 			else
 			{
-				std::cout << "EXEC msg from uuid:" << client->uuid << " ->" << msg_substr << "\n";
+				std::cout << "EXEC msg from uuid:" << client->get_uuid() << " ->" << msg_substr << "\n";
 				app.execute_message(*client, message);
 			}
 			msg.erase(0, crlf_indx + 2);
@@ -202,17 +197,17 @@ void close_conn_by_fd(App &app, int fd)
 	Client *client = app.find_client_by_fd(fd);
 	handle_msg(app, client);
 	close(fd);
-	std::cout << "Peer with uuid:" << client->uuid << " closed the connection.\n";
-	app.remove_client(client->uuid);
+	std::cout << "Peer with uuid:" << client->get_uuid() << " closed the connection.\n";
+	app.remove_client(client->get_uuid());
 }
 
 void close_conn_by_uuid(App &app, uint32 uuid)
 {
 	Client *client = app.get_client(uuid);
 	handle_msg(app, client);
-	close(client->fd);
-	std::cout << "Closed connection to peer with uuid:" << client->uuid << ".\n";
-	app.remove_client(client->uuid);
+	close(client->get_fd());
+	std::cout << "Closed connection to peer with uuid:" << client->get_uuid() << ".\n";
+	app.remove_client(client->get_uuid());
 }
 
 static void signal_handler(int sig)

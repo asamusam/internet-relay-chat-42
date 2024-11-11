@@ -1,5 +1,7 @@
 #include "IRCReply.hpp"
 
+#include <sstream>
+
 std::pair<IRCReplyCodeEnum, std::string> reply_data[] = {
     std::make_pair(ERR_UNKNOWNCOMMAND,    "<client> <command> :Unknown command"),
     std::make_pair(ERR_NEEDMOREPARAMS,    "<client> <command> :Not enough parameters"),
@@ -42,4 +44,16 @@ std::map<IRCReplyCodeEnum, std::string> IRCReply::reply_messages(reply_data, rep
 const std::string& IRCReply::get_reply_message(IRCReplyCodeEnum iec)
 {
 	return (reply_messages[iec]);
+}
+
+std::string IRCReply::code_to_string(IRCReplyCodeEnum code)
+{
+    std::stringstream ss;
+
+    ss << code;
+    
+    if (code < 10)
+        return "00" + ss.str();
+    
+    return ss.str();
 }

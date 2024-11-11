@@ -53,6 +53,8 @@ class IRCReply
         static std::map<IRCReplyCodeEnum, std::string> reply_messages;
     public:
         static const std::string& get_reply_message(IRCReplyCodeEnum code);
+        static std::string code_to_string(IRCReplyCodeEnum code);
+
 };
 
 

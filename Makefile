@@ -9,6 +9,7 @@ DBCXXFLAGS := -Og -ggdb3 $(CXXFLAGS)
 SRC := \
 	src/App.cpp \
 	src/Channel.cpp \
+	src/Client.cpp \
 	src/InternalError.cpp \
 	src/IRCReply.cpp \
 	src/SystemCallErrorMessage.cpp \

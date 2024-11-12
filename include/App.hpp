@@ -44,7 +44,7 @@ class App
         ~App();
 
         void add_client(Client *new_client);
-        void remove_client(int uuid);
+        void remove_client(uint32 uuid);
 
         Channel *create_channel(std::string const &nick, std::string const &channel_name);
         void add_channel(Channel *channel);

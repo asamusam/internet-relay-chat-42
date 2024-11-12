@@ -75,7 +75,7 @@ void App::add_client(Client *new_client)
     clients[new_client->get_uuid()] = new_client;
 }
 
-void App::remove_client(int uuid)
+void App::remove_client(uint32 uuid)
 {
     std::map<uint32, Client *>::iterator it;
 

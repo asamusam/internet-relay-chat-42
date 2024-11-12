@@ -216,7 +216,8 @@ static void signal_handler(int sig)
 {
 	if (sig == SIGQUIT || sig == SIGINT)
 	{
-		//TODO clean. pass App as global variable.
+		extern int g_listen_sock_fd;
+		close(g_listen_sock_fd);
 		std::exit(0);
 	}
 }

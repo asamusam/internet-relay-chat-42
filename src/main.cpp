@@ -12,6 +12,8 @@
 #include "SystemCallErrorMessage.hpp"
 #include "connection.hpp"
 
+int g_listen_sock_fd = -1;
+
 void conn_loop(App &app, int listen_sock_fd)
 {
 	int nfds = 0;
@@ -91,6 +93,7 @@ int main(int argc, char **argv)
 			throw (IEC_BADPASS);
 
 		int listen_sock_fd = listen_sock_init(parse_port(argv[1]));
+		g_listen_sock_fd = listen_sock_fd;
 
 		App app("127.0.0.1", password);
 

@@ -56,6 +56,9 @@ int listen_sock_init(int port)
 		throw (SCEM_SOCKET);
     #endif
 
+	int set = 1;
+	setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &set, sizeof(set));
+
 	if (-1 == bind(sock_fd, (struct sockaddr *) &sai, sizeof(sai)))
 		throw (SCEM_BIND);
 

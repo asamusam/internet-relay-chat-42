@@ -217,7 +217,12 @@ static void signal_handler(int sig)
 	if (sig == SIGQUIT || sig == SIGINT)
 	{
 		extern int g_listen_sock_fd;
-		close(g_listen_sock_fd);
+		extern App *g_app;
+		if (g_app)
+			g_app->~App();
+		if (g_listen_sock_fd > 0)
+			close(g_listen_sock_fd);
+		std::cout << "Server has exited.\n";
 		std::exit(0);
 	}
 }

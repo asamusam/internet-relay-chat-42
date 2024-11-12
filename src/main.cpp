@@ -13,9 +13,11 @@
 #include "connection.hpp"
 
 int g_listen_sock_fd = -1;
+App *g_app = NULL;
 
 void conn_loop(App &app, int listen_sock_fd)
 {
+	g_app = &app;
 	int nfds = 0;
     #ifdef __APPLE__
 	struct kevent events[ConnConst::max_events];
@@ -75,8 +77,6 @@ void conn_loop(App &app, int listen_sock_fd)
 		}
 	}
 
-	/* TODO: this funcion doesn't called when receiving Ctrl-C signal,
-	 * which is the only way of exiting at the moment */
 	close(listen_sock_fd);
 }
 

@@ -5,11 +5,11 @@
   | || |_| | |_| | |_| |
   |_| \___/|____/ \___/.md
 ```
-- [ ] connection:
+- [x] connection:
   - [x] Accept client connections using TCP/IP
   - [x] Store information for each connected client
-  - [ ] Handle client disconnections and timeouts
-- [ ] authentication
+  - [?] Handle client disconnections and timeouts
+- [x] authentication
 - [x] receive messages:
   - [x] aggregate received packages
   - [x] parse message

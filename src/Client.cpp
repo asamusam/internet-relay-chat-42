@@ -44,6 +44,19 @@ uint32 Client::get_uuid() const
     return uuid;
 }
 
+std::string Client::get_msg_buff(void) const
+{
+	return msg_buff;
+}
+
+// ============================
+//         Setters
+// ============================
+
+void Client::set_msg_buff(std::string const &s)
+{
+	msg_buff = s;
+}
 
 // ============================
 //         UUID

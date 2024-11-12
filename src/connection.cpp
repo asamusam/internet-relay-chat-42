@@ -140,7 +140,7 @@ void accept_in_conns(App &app, int epoll_fd, int listen_sock_fd)
 void handle_msg(App &app, Client *client)
 {
 	char buff[MAX_MSG_SIZE];
-	std::string &msg = client->msg_buff;
+	std::string msg = client->get_msg_buff();
 	ssize_t bytes_read;
 	size_t crlf_indx;
 	Message message;
@@ -190,6 +190,7 @@ void handle_msg(App &app, Client *client)
 		}
 	}
 	while (crlf_indx != msg.npos);
+	client->set_msg_buff(msg);
 }
 
 void close_conn_by_fd(App &app, int fd)

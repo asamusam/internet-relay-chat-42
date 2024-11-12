@@ -18,9 +18,6 @@ class Client
         std::string nickname;
         std::string full_nickname;
         int num_channels;
-        
-    public:
-        // quick fix, needs to be changed in the future
         std::string msg_buff;
 
     public:
@@ -37,6 +34,9 @@ class Client
 
         void send_message(std::string const &msg) const;
         void send_numeric_reply(IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const;
+
+		void set_msg_buff(std::string const &s);
+		std::string get_msg_buff(void) const;
 
         static void fill_placeholders(std::string &str, std::map<std::string, std::string> const &info);
         static int split_targets(std::string const &target_str, std::vector<std::string> &targets);

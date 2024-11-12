@@ -2,6 +2,7 @@
 #include "Channel.hpp"
 
 #include <ctime>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <sys/socket.h>
@@ -76,6 +77,13 @@ uint32 Client::generate_uuid(void) const
         if (app.get_client(candidate) == NULL)
             return candidate;
 	}
+}
+
+std::string Client::pretty_uuid(void) const
+{
+	std::ostringstream oss;
+	oss << std::setfill('0') << std::hex << std::showbase <<  std::internal << std::setw(10) << uuid;
+	return (oss.str());
 }
 
 

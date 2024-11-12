@@ -31,6 +31,7 @@ class Client
         std::string get_full_nickname(void) const;
         int get_fd(void) const;
         uint32 get_uuid(void) const;
+		std::string pretty_uuid(void) const;
 
         void send_message(std::string const &msg) const;
         void send_numeric_reply(IRCReplyCodeEnum code, std::map<std::string, std::string> const &info) const;

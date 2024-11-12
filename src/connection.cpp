@@ -149,7 +149,8 @@ void handle_msg(App &app, Client *client)
 	{
 		std::memset(buff, 0, sizeof buff);
 		bytes_read = recv(client->get_fd(), buff, sizeof buff, 0);
-		std::cout << "RECV chars from uuid:" << client->pretty_uuid() << " ->" << buff << "\n";
+		std::cout << "RECV chars from uuid:" << client->pretty_uuid() << " ->" << buff
+			<< (std::strchr(buff, '\n') ? "" : "\n") ;
 		if (-1 ==  bytes_read)
 			throw (SCEM_RECV);
 		if (0 == bytes_read)

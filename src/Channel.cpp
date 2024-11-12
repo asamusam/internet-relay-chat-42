@@ -38,7 +38,14 @@ Channel::Channel(App &app, std::string const &nick, std::string const &name): ap
 
 void Channel::add_client(Client *client)
 {
+    if (is_in_mode(INVITE_ONLY))
+    {
+        remove_invite(client);
+        client->remove_invite(this);
+    }
+
     clients.push_back(client);
+    client->add_channel(this);
 }
 
 void Channel::remove_client(Client *client)
@@ -46,7 +53,12 @@ void Channel::remove_client(Client *client)
     std::vector<Client *>::iterator it;
 
     it = std::find(clients.begin(), clients.end(), client);
+    if (it == clients.end())
+        return ;
+
     clients.erase(it);
+    remove_type_b_param(CHAN_OP, client->get_nickname());
+
     if (clients.size() == 0)
         app.remove_channel(this->name);
 }
@@ -60,7 +72,9 @@ void Channel::add_invite(Client *client)
 {
     if (is_invited(client))
         return ;
+        
     invites.push_back(client);
+    client->add_invite(this);
 }
 
 void Channel::remove_invite(Client *client)
@@ -70,6 +84,7 @@ void Channel::remove_invite(Client *client)
     it = std::find(invites.begin(), invites.end(), client);
     if (it == invites.end())
         return ;
+
     invites.erase(it);
 }
 

@@ -13,7 +13,7 @@
 //   Constructor & Destructor
 // ============================
 
-Client::Client(App &app, int fd) : app(app), fd(fd), is_registered(false), has_valid_pwd(false), num_channels(0)
+Client::Client(App &app, int fd) : app(app), fd(fd), is_registered(false), has_valid_pwd(false)
 {
     uuid = generate_uuid();
 }
@@ -326,7 +326,7 @@ void Client::join(std::vector<std::string> const &params)
         info["channel"] = params[0].substr(0, 200);
     else
         info["channel"] = params[0];
-    if (this->num_channels == app.client_channel_limit)
+    if (this->channels.size() == app.client_channel_limit)
         return send_numeric_reply(ERR_TOOMANYCHANNELS, info);
     channel = app.find_channel_by_name(info["channel"]);
     if (channel)
@@ -360,6 +360,31 @@ void Client::join(std::vector<std::string> const &params)
         send_numeric_reply(RPL_TOPIC, info);
     info["symbol"] = "=";
     send_numeric_reply(RPL_NAMREPLY, info);
+}
+
+void Client::add_channel(Channel *channel)
+{
+    channels.push_back(channel);
+}
+
+void Client::remove_channel(Channel *channel)
+{
+    std::vector<Channel *>::iterator it;
+
+    it = std::find(channels.begin(), channels.end(), channel);
+    if (it == channels.end())
+        return;
+
+    channels.erase(it);
+}
+
+void Client::remove_channels(void)
+{
+    for (std::vector<Channel *>::iterator i = channels.begin(); i < channels.end(); i++)
+    {
+        (*i)->remove_client(this);
+        this->remove_channel(*i);
+    }
 }
 
 
@@ -481,6 +506,7 @@ void Client::kick(std::vector<std::string> const &params)
         return send_numeric_reply(ERR_USERNOTINCHANNEL, info);
     channel->notify(this->full_nickname, info["command"], info["user"]);
     channel->remove_client(user);
+    user->remove_channel(channel);
 }
 
 
@@ -523,6 +549,31 @@ void Client::invite(std::vector<std::string> const &params)
     invite_msg = app.create_message(this->full_nickname, info["command"], info["nick"] + ' ' + info["channel"]);
     recipient->send_message(invite_msg);
     send_numeric_reply(RPL_INVITING, info);
+}
+
+void Client::add_invite(Channel *channel)
+{
+    invites.push_back(channel);
+}
+
+void Client::remove_invite(Channel *channel)
+{
+    std::vector<Channel *>::iterator it;
+
+    it = std::find(invites.begin(), invites.end(), channel);
+    if (it == invites.end())
+        return ;
+        
+    invites.erase(it);
+}
+
+void Client::remove_invites(void)
+{
+    for (std::vector<Channel *>::iterator i = invites.begin(); i < invites.end(); i++)
+    {
+        (*i)->remove_invite(this);
+        this->remove_invite(*i);
+    }   
 }
 
 

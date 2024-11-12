@@ -82,8 +82,12 @@ void App::remove_client(int uuid)
     it = clients.find(uuid);
     if (it == clients.end())
         return ;
-    delete it->second;
+
+    it->second->remove_channels();
+    it->second->remove_invites();
+
     clients.erase(uuid);
+    delete it->second;
 }
 
 Client *App::get_client(uint32 uuid) const
@@ -142,8 +146,9 @@ void App::remove_channel(std::string const &channel_name)
     it = channels.find(channel_name);
     if (it == channels.end())
         return ;
+
+    channels.erase(it);
     delete it->second;
-    channels.erase(channel_name);
 }
 
 Channel *App::find_channel_by_name(std::string const &channel_name) const

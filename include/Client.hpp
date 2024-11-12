@@ -5,6 +5,7 @@
 
 #include <string>
 
+class Channel;
 
 class Client
 {
@@ -17,7 +18,8 @@ class Client
         std::string username;
         std::string nickname;
         std::string full_nickname;
-        int num_channels;
+        std::vector<Channel *> channels;
+        std::vector<Channel *> invites;
         std::string msg_buff;
 
     public:
@@ -58,6 +60,13 @@ class Client
 
         bool is_valid_nick(std::string const &nickname) const;
         bool is_registered_client(void) const;
+
+        void add_channel(Channel *channel);
+        void add_invite(Channel *channel);
+        void remove_channel(Channel *channel);
+        void remove_invite(Channel *channel);
+        void remove_channels(void);
+        void remove_invites(void);        
 };
 
 #endif // CLIENT_HPP

@@ -66,6 +66,8 @@ class App
 
         bool is_correct_pwd(std::string const &password) const;
 
+		void display_welcome(void) const;
+
 };
 
 #endif // APP_HPP

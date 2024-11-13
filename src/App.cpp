@@ -30,6 +30,8 @@ App::App(std::string const &name, std::string const &password) : server_password
     commands.push_back((Command){"MODE",    &Client::mode});
     commands.push_back((Command){"PING",    &Client::ping});
     commands.push_back((Command){"WHOIS",   NULL});
+
+	display_welcome();
 }
 
 App::~App()
@@ -251,4 +253,15 @@ int App::parse_message(Client &user, std::string const &msg_string, Message &msg
     }
 
     return 0;
+}
+// ==========================
+//		   Misc
+// ==========================
+
+void App::display_welcome(void) const
+{
+	std::cout << "\t================================================================\n";
+	std::cout << "\t= Server has started and is listening for incoming connections =\n";
+	std::cout << "\t= To quit hit ctrl^\\ or ctrl^C                                 =\n";
+	std::cout << "\t================================================================\n";
 }

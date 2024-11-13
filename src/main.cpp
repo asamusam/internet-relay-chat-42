@@ -19,37 +19,37 @@ void conn_loop(App &app, int listen_sock_fd)
 {
 	g_app = &app;
 	int nfds = 0;
-    #ifdef __APPLE__
+	#ifdef __APPLE__
 	struct kevent events[ConnConst::max_events];
-    #else
+	#else
 	struct epoll_event events[ConnConst::max_events];
 	#endif
-    (void) std::memset(events, 0, sizeof(events));
+	(void) std::memset(events, 0, sizeof(events));
 
 	int epoll_fd = epoll_init(listen_sock_fd);
 
 	for (;;)
 	{
-        #ifdef __APPLE__
-        nfds = kevent(epoll_fd, NULL, 0, events, ConnConst::max_events, NULL);
+		#ifdef __APPLE__
+		nfds = kevent(epoll_fd, NULL, 0, events, ConnConst::max_events, NULL);
 		if (-1 == nfds)
 			throw (SCEM_KEVENT);
-        #else
+		#else
 		nfds = epoll_wait(epoll_fd, events, ConnConst::max_events, ConnConst::time_out_ms);
 		if (-1 == nfds)
 			throw (SCEM_EPOLL_WAIT);
-        #endif
+		#endif
 
 		for (int i = 0; i < nfds; ++i)
 		{
-            #ifdef __APPLE__
-            int fd = events[i].ident;
-            int filter = events[i].filter;
-            bool is_hup = events[i].flags & EV_EOF;
-            #else
-            int fd = events[i].data.fd;
-            bool is_hup = events[i].events & (EPOLLHUP | EPOLLRDHUP);
-            #endif
+			#ifdef __APPLE__
+			int fd = events[i].ident;
+			int filter = events[i].filter;
+			bool is_hup = events[i].flags & EV_EOF;
+			#else
+			int fd = events[i].data.fd;
+			bool is_hup = events[i].events & (EPOLLHUP | EPOLLRDHUP);
+			#endif
 
 			try
 			{
@@ -57,13 +57,13 @@ void conn_loop(App &app, int listen_sock_fd)
 					accept_in_conns(app, epoll_fd, listen_sock_fd);
 				else if (is_hup)
 					close_conn_by_fd(app, fd);
-                #ifdef __APPLE__
-                else if (filter == EVFILT_READ)
-                    handle_msg(app, app.find_client_by_fd(fd));
-                #else
+				#ifdef __APPLE__
+				else if (filter == EVFILT_READ)
+					handle_msg(app, app.find_client_by_fd(fd));
+				#else
 				else if (events[i].events & EPOLLIN)
 					handle_msg(app, app.find_client_by_fd(fd));
-                #endif
+				#endif
 			}
 			catch (scem_function sf)
 			{
@@ -116,5 +116,5 @@ int main(int argc, char **argv)
 		std::cerr << e.what() << "\n";
 	}
 
-    return (0);
+	return (0);
 }

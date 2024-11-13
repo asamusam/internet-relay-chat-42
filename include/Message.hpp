@@ -6,9 +6,9 @@
 
 struct Message
 {
-    std::string prefix;
-    std::string command;
-    std::vector<std::string> params;
+	std::string prefix;
+	std::string command;
+	std::vector<std::string> params;
 };
 
 #endif // MESSAGE_HPP

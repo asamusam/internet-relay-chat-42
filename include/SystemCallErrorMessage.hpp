@@ -18,9 +18,9 @@ enum scem_function
 	SCEM_RECV,
 	SCEM_SIGACT,
 	SCEM_SOCKET,
-    SCEM_FCNTL,
-    SCEM_KEVENT,
-    SCEM_KQUEUE
+	SCEM_FCNTL,
+	SCEM_KEVENT,
+	SCEM_KQUEUE
 };
 
 class SystemCallErrorMessage

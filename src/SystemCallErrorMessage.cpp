@@ -5,7 +5,7 @@ std::pair<scem_function, std::string> sf_data[] = {
 	std::make_pair(SCEM_ACCEPT,      "accept()"),
 	std::make_pair(SCEM_BIND,         "bind()"),
 	std::make_pair(SCEM_EPOLL_CREATE, "epoll_create()"),
-    std::make_pair(SCEM_KQUEUE,       "kqueue()"),
+	std::make_pair(SCEM_KQUEUE,       "kqueue()"),
 	std::make_pair(SCEM_EPOLL_CTL,    "epoll_ctl()"),
 	std::make_pair(SCEM_KEVENT,       "kevent()"),
 	std::make_pair(SCEM_FCNTL,        "fcntl()"),

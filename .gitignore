@@ -38,3 +38,6 @@ ircserv
 
 # Clang configuration
 compile_flags.txt
+
+# other stuff
+.gdb_history
